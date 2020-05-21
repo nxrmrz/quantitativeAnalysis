@@ -1,7 +1,10 @@
 rm(list = ls(all.names = TRUE))
 
+# Packages
+library(lattice) # xyplot 
+
 # Loading CSV file
-prj <- read.csv("quantitativeAnalysis/prjDetPanel-Jan2011.csv")
+prj <- read.csv("prjDetPanel-Jan2011.csv")
 # Display summary of all columns
 # Numeric will have 5-point summary + Mean
 # Category will have counts per case
@@ -44,3 +47,4 @@ boxplot(members ~ Time, data = prj_8)
 boxplot(members ~ OwnerType*Time, data = prj_8)
 boxplot(members ~ OwnerType*Time, data = prj_8,
         names = FALSE, col = c("red", "blue"))
+
