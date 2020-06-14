@@ -10,6 +10,9 @@ prj <- read.csv("prjDetPanel-Jan2011.csv")
 # Date/Time are being treated as category as it is plain text
 summary(prj)
 
+# License summary
+summary(prj$Licence)
+
 # display sample records
 head(prj)
 summary(prj)
@@ -32,18 +35,6 @@ pca_scale <- prcomp(prj[,c(4,7:20)], scale.=TRUE)
 pca_scale
 summary(pca_scale)
 
-# missing data
-head(prj[!complete.cases(prj),])
-dim(prj)
-dim(prj[!complete.cases(prj),])
-dim(prj[complete.cases(prj),])
-x<-summary(prj)
-sum(is.na(prj))
-table(is.na(prj))
-sapply(prj, function(x) sum(is.na(x)))
-sum(rowSums(is.na(prj))!=0)
-sum(colSums(is.na(prj))!=0)
-
 # extract 10 cases (80 records)
 prj_top_10 <- prj[1:80,]
 summary(prj_top_10)
@@ -55,6 +46,7 @@ xyplot(Health~Time|prjId, data=prj_top_10, layout = c(5,2))
 
 # extract 10 random cases (80 records)
 prj_rnd_10<-prj[prj$prjCode %in% sample(1:(total_rows/8),10), ]
+prj_rnd_10<-prj[prj$prjId %in% sample(unique(prj$prjId),10), ]
 summary(prj_rnd_10)
 
 sample(unique(prj$prjId),10)
@@ -95,11 +87,37 @@ xyplot(obsCode~Time|prjId, data=prj[prj$prjCode %in% sample(1:(total_rows/8),10)
 xyplot(prjCode~Time|prjId, data=prj[prj$prjCode %in% sample(1:(total_rows/8),10), ], layout = c(5,2))
 
 # Check all columns for within-person variance
+library(nlme) # lme
 lme(X.~1, prj_top_10, random=~1 |X.)
 summary(lme(X.~1, prj_top_10, random=~1 |X., method="ML"))
 VarCorr(lme(X.~1, prj_top_10, random=~1 |X., method="ML"))
 summary(lme(Health~1, prj, random=~1 |prjId, method="ML"))
 VarCorr(lme(forks~Time, prj, random=~Time |X., method="ML"))
+
+colnames(prj)
+
+summary(prj$prjId)
+col <- "prjId"
+summary(prj$col)
+summary(prj[col])
+summary(prj[[col]])
+
+for (col in colnames(prj)){
+        print(col)
+        print(summary(prj[[col]]))
+        print(lme(X.~col, prj, random=~1 |X.))
+}
+
+for (col in colnames(prj)){
+        print(col)
+        summary(prj$col)
+        if (col!="X."){
+                #summary(lme(X.~col, prj, random=~1 |X.))
+                summary(prj$col)
+        }
+}
+
+summary(lme(X.~prjId, prj, random=~1 |X.))
 
 hist(prj$Health)
 table(prj$Health)
@@ -217,3 +235,63 @@ summary(plm(commits ~ members, data = prj, index = "prjId"))
 summary(plm(commits ~ Time*members, data = prj, index = "prjId"))
 
 round(cor(prj[, c(1,4,7:20)]),2)
+
+# Check time variant vs invariant columns
+install.packages("sqldf", quiet=TRUE)
+library(sqldf)
+for (col in colnames(prj)) {
+        query <- paste("SELECT prjCode, ", col, ", COUNT(1)",
+                       " FROM prj",
+                       " GROUP BY prjCode, ", col,
+                       " HAVING COUNT(1) < 8",
+                       sep="")
+        if (dim(sqldf(query))[1]==0){
+                print(paste(col, " is time-invariant."))
+        }
+}
+col <- 'X.'
+query <- paste("SELECT prjCode, ", col, ", COUNT(1)",
+               " FROM prj",
+               " GROUP BY prjCode, ", col,
+               " HAVING COUNT(1) < 8",
+               sep="")
+dim(sqldf(query))
+
+# Missing Data Tests
+library(dplyr)
+install.packages("MissMech", quiet=TRUE)
+library(MissMech)
+prj[,c(1,2,21,22,23)]
+TestMCARNormality(prj[,c(1,2,4,21,22,23)])
+
+explanatory=c("Time","prjId")
+dependent="PRClosedTime"
+prj %>%
+        select(explanatory) %>%
+        TestMCARNormality()
+
+# missing data
+dim(prj)
+dim(prj[!complete.cases(prj),])
+dim(prj[complete.cases(prj),])
+sum(is.na(prj))
+table(complete.cases(prj))
+table(is.na(prj))
+
+sapply(prj, function(x) sum(is.na(x)))
+
+sum(rowSums(is.na(prj))!=0)
+sum(colSums(is.na(prj))!=0)
+
+colSums(is.na(prj))!=0
+
+library(dplyr)
+install.packages("finalfit", quiet=TRUE)
+library(finalfit)
+prj %>%
+        missing_compare("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+prj %>%
+        missing_compare("IssueClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+prj %>%
+        missing_compare("Health", c("prjId", "Time", "Licence", "OwnerType"))
+
