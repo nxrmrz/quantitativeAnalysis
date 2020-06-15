@@ -4,6 +4,43 @@ rm(list = ls(all.names = TRUE))
 # Install Packages
 # Note any special packages & relevant functions needed here
 
+# Functions for Model Evaluation
+calc_ICC <- function(lme_umm) {
+  var_between <- as.numeric(VarCorr(lme_umm)[1][1]) 
+  var_within <- as.numeric(VarCorr(lme_a)[2][1])
+  ICC <- var_between/(var_between+var_within)
+  print(paste("ICC: ",ICC))
+}
+calc_R_sq_e <- function(lme_ugm, lme_umm) {
+  ugm_params <- dim(VarCorr(lme_ugm))[1]
+  var_within_ugm <- as.numeric(VarCorr(lme_ugm)[ugm_params][1]) 
+  var_within_umm <- as.numeric(VarCorr(lme_umm)[2][1]) 
+  R_sq_e <- 1-(var_within_ugm/var_within_umm)
+  print(paste("R_sq_e: ",R_sq_e))
+  aic_ugm <- summary(lme_ugm)$AIC
+  aic_umm <- summary(lme_umm)$AIC
+  aic_chg <- aic_ugm-aic_umm
+  print(paste("AIC Change: ",aic_chg))
+}
+calc_R_sq_n <- function(lme_new, lme_ugm) {
+  new_params <- dim(VarCorr(lme_new))[1]
+  ugm_params <- dim(VarCorr(lme_ugm))[1]
+  if(new_params==ugm_params){
+    for(i in 1:(ugm_params-1)) {
+      var_between_new <- as.numeric(VarCorr(lme_new)[i])
+      var_between_ugm <- as.numeric(VarCorr(lme_ugm)[i])
+      R_sq_n <- 1-(var_between_new/var_between_ugm)
+      print(paste("R_sq_",i-1,": ",R_sq_n))
+    }
+    aic_new <- summary(lme_new)$AIC
+    aic_ugm <- summary(lme_ugm)$AIC
+    aic_chg <- aic_new-aic_ugm
+    print(paste("AIC Change: ",aic_chg))
+  } else{
+    print("Models have different number of parameters")
+  }
+}
+
 # Load CSV file
 prj <- read.csv("prjDetPanel-Jan2011.csv")
 
@@ -18,7 +55,9 @@ names(prj)[names(prj)=="X."] <- "X"
 names(prj)[names(prj)=="PR.Issue.Cmnt"] <- "PRIssueCmnt"
 # Display summary of each column
 summary(prj)
-# Note: X. is not continuous - does not end at 2680, prjId is not continuous
+# Note: X is not continuous - does not end at 2680, prjId is not continuous
+# 3 columns (PRClosedTime, IssueClosedTime, Health) show NA
+# 2 columns (Licence, ContribFile) show BLANK
 
 # Check number of instances in each wave
 aggregate(X ~ Time, data = prj, FUN = length)
@@ -26,7 +65,7 @@ aggregate(X ~ Time, data = prj, FUN = length)
 prj_wave <- aggregate(Time ~ prjId, data = prj, FUN = length)
 # Check possible number of instances
 aggregate(prjId ~ Time, data = prj_wave, FUN = length)
-# Note: we have 8 waves for each project, so it is a balanced dataset
+# Note: we have 8 identical waves for each project, so it is a balanced dataset
 
 # Add sequential observation code - assuming data is sequential: project-time
 prj$obsCode <- 1:nrow(prj)
@@ -57,7 +96,7 @@ sum(rowSums(is.na(prj))!=0)
 sum(colSums(is.na(prj))!=0)
 colSums(is.na(prj))!=0
 # Note: 3 columns have missing data (NA) - PRClosedTime, IssueClosedTime & Health
-
+# Identify patterns of missing data
 library(dplyr)
 library(finalfit)
 prj %>%
@@ -67,7 +106,7 @@ prj %>%
 prj %>%
   missing_compare("Health", c("prjId", "Time", "Licence", "OwnerType"))
 # Note: All cases show significant impact of explanatory variables on missing variables
-
+# Check MCAR assumption
 library(MissMech)
 prj_miss <- prj[,c(1,2,4,21,22,23)]
 TestMCARNormality(prj_miss)
