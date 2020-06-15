@@ -361,7 +361,7 @@ prj_miss %>%
         geom_density(alpha = 0.5)
 
 # License: Blank vs Non-Blank
-prj$dummyLicence <- ifelse(prj$Licence=="",0,1)
+prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
 
 summary(lme(members~Time, prj, random=~Time|prjId))
 summary(lme(commits~Time, prj, random=~Time|prjId))
@@ -454,22 +454,48 @@ calc_R_sq_n <- function(lme_new, lme_ugm) {
         }
 }
 
+hist(prj$watchers)
+hist(log(prj$watchers))
+hist(log(log(prj$watchers)))
+hist(sqrt(prj$watchers))
+hist(sqrt(sqrt(prj$watchers)))
+
+
 # Spectator Interest: Watchers, OwnerFollower, AvgFollower
 lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
 summary(lme_A1m)
 calc_ICC(lme_A1m)
+dim(lme_A1m$residuals)
+dim(prj$obsCode)
+plot(lme_A1m$residuals, prj$obsCode)
+head(lme_A1m$residuals)
+
 lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
 summary(lme_A1g1)
 calc_R_sq_e(lme_A1g1, lme_A1m)
-lme_A1g1a <- lme(watchers~Time+dummyLicence, prj, random=~Time|prjId, method="ML")
+lme_A1g1a <- lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML")
 summary(lme_A1g1a)
 calc_R_sq_n(lme_A1g1a, lme_A1g1)
 lme_A1g1b <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 summary(lme_A1g1b)
 calc_R_sq_n(lme_A1g1b, lme_A1g1)
-lme_A1g1c <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
+lme_A1g1c <- lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
 summary(lme_A1g1c)
 calc_R_sq_n(lme_A1g1c, lme_A1g1)
+lme_A1g1d <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1d)
+calc_R_sq_n(lme_A1g1d, lme_A1g1)
+lme_A1g1e <- lme(watchers~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
+# Does not converge
+lme_A1g1f <- lme(watchers~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1f)
+calc_R_sq_n(lme_A1g1f, lme_A1g1)
+lme_A1g1g <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1g)
+calc_R_sq_n(lme_A1g1g, lme_A1g1)
+lme_A1g1h <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1h)
+calc_R_sq_n(lme_A1g1h, lme_A1g1)
 lme_A1g2 <- lme(watchers~issues, prj, random=~issues|prjId, method="ML")
 summary(lme_A1g2)
 calc_R_sq_e(lme_A1g2, lme_A1m)
@@ -477,9 +503,22 @@ calc_R_sq_n(lme_A1g2, lme_A1g1)
 lme_A1g3 <- lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML")
 summary(lme_A1g3)
 calc_R_sq_e(lme_A1g3, lme_A1m)
-lme_A1g3a <- lme(watchers~Time+issues+OwnerType, prj, random=~Time+issues|prjId, method="ML")
+lme_A1g3a <- lme(watchers~Time+issues+Licence, prj, random=~Time+issues|prjId, method="ML")
 summary(lme_A1g3a)
 calc_R_sq_n(lme_A1g3a, lme_A1g3)
+lme_A1g3b <- lme(watchers~Time+issues+dummyLicence1, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3b)
+calc_R_sq_n(lme_A1g3b, lme_A1g3)
+lme_A1g3c <- lme(watchers~Time+issues+dummyLicence2, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3c)
+calc_R_sq_n(lme_A1g3c, lme_A1g3)
+lme_A1g3d <- lme(watchers~Time+issues+OwnerType, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3d)
+calc_R_sq_n(lme_A1g3d, lme_A1g3)
+lme_A1g3e <- lme(watchers~Time+issues+dummyHealth, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3e)
+calc_R_sq_n(lme_A1g3e, lme_A1g3)
+# Does not converge
 
 
 summary()
@@ -490,6 +529,8 @@ summary(lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML"))
 summary(lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML"))
 summary()
 
-prj$dummyLicence1 <- ifelse(prj$Licence %in% c("Apache License 2.0", "MIT License"),1,0)
-summary(lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML"))
+prj$dummyLicence2 <- ifelse(prj$Licence %in% c("Apache License 2.0", "MIT License"),1,0)
+summary(lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML"))
+
+prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
