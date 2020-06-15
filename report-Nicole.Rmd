@@ -1,0 +1,98 @@
+---
+title: "nicoleExploratory"
+author: "Nicole Ramirez (lram025)"
+date: "6/11/2020"
+output: html_document
+---
+
+## INFOSYS750 exploratory analyses
+
+We read data in 
+```{r setup, include=FALSE}
+df <- read.csv("prjDetPanel-Jan2011.csv", header=T)
+```
+
+Visualise the first 5 entries from our dataset, our dataset's dimensions, as well as the data-structures within our data-set
+```{r}
+head(df,5)
+dim(df)
+str(df)
+```
+We notice that some columns are factors, which may complicate visualisations. So we drop them for now
+
+```{r}
+df_5 <-df[,-which(sapply(df, class) == "factor")]
+```
+
+We do a correlation with our numeric variables
+```{r, echo=FALSE}
+library("corrplot")
+corr_d <- cor(df, use="complete.obs", method="spearman")
+corrplot(corr_d, type="lower", diag=FALSE)
+```
+
+## Exploratory Analyses
+
+We look at 5 different projects and see how our various metrics for the research questions change over time
+
+```{r}
+#grabbing 5 different projects
+df_5 <-df[df$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
+```
+
+
+To recap, our research questions were:
+* How does user interest change over time?
+  * passive user interest
+  * active user interest 
+* How does developer interest change over time?
+* How does project activity change over time?
+
+First, # of watchers. We take this as an operationalised measure for passive user interest, with users either being developers or non-developers. We see that there are differences across projects over time, which is a positive sign we'd need to model user interest in some way. We see that projects 2,3 and 5 are quite popular. Their watchers are from 500 above. Projects 1 and 4 aren't as popular, with watchers presumably less than a hundred.
+
+```{r, echo=FALSE}
+library("ggplot2")
+
+# of watchers changes over time
+w_o_t <- ggplot(df_5, aes(x=Time, y=watchers, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  geom_point() +
+  geom_smooth()
+w_o_t 
+```
+
+Then, the # of forks, an operationalised measure for active user interest. We see that although project 3 was popular (# of watchers), it had a low number of users actively interested in it (# of forks). Projects 2 and 5 were popular and had high usage. Unpopular projects 1 and 4 had (unsurpisingly) a low number of forks too.
+
+```{r}
+# of forks changes over time
+f_o_t <- ggplot(df_5, aes(x=Time, y=forks, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() +
+  geom_smooth()
+f_o_t 
+```
+
+Now we look at the # of members -- that is the # of people part of a github organization/team. This is the operationalised measure of developer interest (i.e. actively contributing to this particular project). We see that a majority of the projects, save for project 2, have less than 20 members in their development team. A majority of the projects plateau in their number of members at around timepoint 4 and onwards.
+
+```{r, echo=FALSE}
+m_o_t <- ggplot(df_5, aes(x=Time, y=members, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() +
+  geom_smooth()
+m_o_t 
+```
+
+Finally, we look at the # of commits, that is, the # of code changes finalised for the project by its development team. This is our operationalised measure of project activity. There is a general trend of increasing # of commits as time goes by, though some projects reach their plateau much faster than others. 
+
+```{r, echo=FALSE}
+c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() + 
+  geom_smooth()
+c_o_t 
+```
+
+
