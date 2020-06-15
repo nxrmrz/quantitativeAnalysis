@@ -214,6 +214,8 @@ summary(lme_ab)
 VarCorr(lme_ab)
 # FAIL - same as a
 
+lme(stress~week, ms, random=~week |id)
+lme(illness~week, ms, random=~week |id)
 mmm(formula=cbind(stress,illness)~week, id=ms$id, data=ms)
 fit_cd <- mmm(formula=cbind(stress,illness)~week, id=ms$id, data=ms)
 summary(fit_cd)
@@ -261,7 +263,6 @@ dim(sqldf(query))
 library(dplyr)
 install.packages("MissMech", quiet=TRUE)
 library(MissMech)
-prj[,c(1,2,21,22,23)]
 TestMCARNormality(prj[,c(1,2,4,21,22,23)])
 
 explanatory=c("Time","prjId")
@@ -294,4 +295,201 @@ prj %>%
         missing_compare("IssueClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
 prj %>%
         missing_compare("Health", c("prjId", "Time", "Licence", "OwnerType"))
+
+install.packages("naniar", quiet=TRUE)
+# Scatter Plot
+library(ggplot2)
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = Health)) +
+        geom_point()
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = PRClosedTime)) +
+        geom_point()
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = IssueClosedTime)) +
+        geom_point()
+# Missing
+library(naniar)
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = Health)) +
+        geom_miss_point()
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = PRClosedTime)) +
+        geom_miss_point()
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = IssueClosedTime)) +
+        geom_miss_point()
+# By Owner
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = Health)) +
+        geom_miss_point() +
+        facet_wrap(~OwnerType)
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = PRClosedTime)) +
+        geom_miss_point() +
+        facet_wrap(~OwnerType)
+ggplot(data = prj,
+       aes(x = obsCode,
+           y = IssueClosedTime)) +
+        geom_miss_point() +
+        facet_wrap(~OwnerType)
+
+prj_miss <- prj[,c(1,2,4,21,22,23,29)]
+nabular(prj_miss)
+prj_miss %>%
+        nabular() %>%
+        ggplot(aes(x = obsCode,
+                   fill = Health_NA)) + 
+        geom_density(alpha = 0.5)
+prj_miss %>%
+        nabular() %>%
+        ggplot(aes(x = obsCode,
+                   fill = PRClosedTime_NA)) + 
+        geom_density(alpha = 0.5)
+prj_miss %>%
+        nabular() %>%
+        ggplot(aes(x = obsCode,
+                   fill = IssueClosedTime_NA)) + 
+        geom_density(alpha = 0.5)
+
+# License: Blank vs Non-Blank
+prj$dummyLicence <- ifelse(prj$Licence=="",0,1)
+
+summary(lme(members~Time, prj, random=~Time|prjId))
+summary(lme(commits~Time, prj, random=~Time|prjId))
+
+install.packages("joineRML", quiet=TRUE)
+library(joineRML)
+
+data(heart.valve)
+hvd <- heart.valve[!is.na(heart.valve$log.grad) & !is.na(heart.valve$log.lvmi), ]
+fit2 <- mjoint(
+        formLongFixed = list("grad" = log.grad ~ time + sex + hs,
+                             "lvmi" = log.lvmi ~ time + sex),
+        formLongRandom = list("grad" = ~ 1 | num,
+                              "lvmi" = ~ time | num),
+        formSurv = Surv(fuyrs, status) ~ age,
+        data = list(hvd, hvd),
+        inits = list("gamma" = c(0.11, 1.51, 0.80)),
+        timeVar = "time",
+        verbose = TRUE)
+logLik(fit2)
+summary(fit2)
+
+prj_joint <- prj[!is.na(prj$members) & !is.na(prj$commits), ]
+mjoint(
+        formLongFixed = list("01"=members~Time,
+                             "02"=commits~Time),
+        formLongRandom = list("01"=~Time|prjId,
+                              "02"=~Time|prjId),
+        data=list(prj_joint, prj_joint),
+        timeVar="Time"
+)
+# NOT SUITABLE
+
+summary(lme(members~Time, prj, random=~Time|prjId))
+summary(lme(commits~Time, prj, random=~Time|prjId))
+mmm(formula=cbind(members,commits)~Time, id=prj$prjId, data=prj)
+summary(mmm(formula=cbind(members,commits)~Time, id=prj$prjId, data=prj))
+summary(mmm(formula=cbind(members,commits,issues)~Time+OwnerType, id=prj$prjId, data=prj))
+?mmm
+
+summary(prj$committers)
+summary(prj$MemCommitters)
+summary(prj$committers-prj$MemCommitters)
+
+# Commiters who are not Members
+prj$nonMemCommitters <- prj$committers-prj$MemCommitters
+prj$nonMemCommittersRatio <- ifelse(prj$committers==0,0,(prj$nonMemCommitters/prj$committers))
+
+head(prj[,-c(3,5,6,24,25,28)])
+round(cor(prj[,-c(3,5,6,24,25,28)]),2)
+
+# Functions for Model Evaluation
+calc_ICC <- function(lme_umm) {
+        var_between <- as.numeric(VarCorr(lme_umm)[1][1]) 
+        var_within <- as.numeric(VarCorr(lme_a)[2][1])
+        ICC <- var_between/(var_between+var_within)
+        print(paste("ICC: ",ICC))
+        return(TRUE)
+}
+calc_R_sq_e <- function(lme_ugm, lme_umm) {
+        ugm_params <- dim(VarCorr(lme_ugm))[1]
+        var_within_ugm <- as.numeric(VarCorr(lme_ugm)[ugm_params][1]) 
+        var_within_umm <- as.numeric(VarCorr(lme_umm)[2][1]) 
+        R_sq_e <- 1-(var_within_ugm/var_within_umm)
+        print(paste("R_sq_e: ",R_sq_e))
+        aic_ugm <- summary(lme_ugm)$AIC
+        aic_umm <- summary(lme_umm)$AIC
+        aic_chg <- aic_ugm-aic_umm
+        print(paste("AIC Change: ",aic_chg))
+        return(TRUE)
+}
+calc_R_sq_n <- function(lme_new, lme_ugm) {
+        new_params <- dim(VarCorr(lme_new))[1]
+        ugm_params <- dim(VarCorr(lme_ugm))[1]
+        if(new_params==ugm_params){
+                for(i in 1:(ugm_params-1)) {
+                        var_between_new <- as.numeric(VarCorr(lme_new)[i])
+                        var_between_ugm <- as.numeric(VarCorr(lme_ugm)[i])
+                        R_sq_n <- 1-(var_between_new/var_between_ugm)
+                        print(paste("R_sq_",i-1,": ",R_sq_n))
+                }
+                aic_new <- summary(lme_new)$AIC
+                aic_ugm <- summary(lme_ugm)$AIC
+                aic_chg <- aic_new-aic_ugm
+                print(paste("AIC Change: ",aic_chg))
+                return(TRUE)
+        } else{
+                print("Models have different number of parameters")
+                return(FALSE)
+        }
+}
+
+# Spectator Interest: Watchers, OwnerFollower, AvgFollower
+lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
+summary(lme_A1m)
+calc_ICC(lme_A1m)
+lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1)
+calc_R_sq_e(lme_A1g1, lme_A1m)
+lme_A1g1a <- lme(watchers~Time+dummyLicence, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1a)
+calc_R_sq_n(lme_A1g1a, lme_A1g1)
+lme_A1g1b <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1b)
+calc_R_sq_n(lme_A1g1b, lme_A1g1)
+lme_A1g1c <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
+summary(lme_A1g1c)
+calc_R_sq_n(lme_A1g1c, lme_A1g1)
+lme_A1g2 <- lme(watchers~issues, prj, random=~issues|prjId, method="ML")
+summary(lme_A1g2)
+calc_R_sq_e(lme_A1g2, lme_A1m)
+calc_R_sq_n(lme_A1g2, lme_A1g1)
+lme_A1g3 <- lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3)
+calc_R_sq_e(lme_A1g3, lme_A1m)
+lme_A1g3a <- lme(watchers~Time+issues+OwnerType, prj, random=~Time+issues|prjId, method="ML")
+summary(lme_A1g3a)
+calc_R_sq_n(lme_A1g3a, lme_A1g3)
+
+
+summary()
+summary()
+summary(lme(watchers~Time+issues, prj, random=~Time|prjId, method="ML"))
+summary(lme(watchers~Time, prj, random=~Time+issues|prjId, method="ML"))
+summary(lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML"))
+summary(lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML"))
+summary()
+
+prj$dummyLicence1 <- ifelse(prj$Licence %in% c("Apache License 2.0", "MIT License"),1,0)
+summary(lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML"))
 
