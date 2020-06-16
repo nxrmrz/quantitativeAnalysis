@@ -48,6 +48,18 @@ calc_R_sq_n <- function(lme_new, lme_ugm) {
     print("Models have different number of parameters")
   }
 }
+summary_lme <- function(lme_model, type, ref_model) {
+  sum_model <-summary(lme_model) 
+  print(round(sum_model$tTable[, c(1,5)],3))
+  print(VarCorr(lme_model))
+  print(paste("AIC: ",round(sum_model$AIC,0)))
+  print(paste("BIC: ",round(sum_model$BIC,0)))
+  print(paste("LogLik: ",round(sum_model$logLik,0)))
+  print(paste("Deviance: ",round(-2*sum_model$logLik,0)))
+  if(type==1){calc_ICC(lme_model)}
+  if(type==2){calc_R_sq_e(lme_model,ref_model)}
+  if(type==3){calc_R_sq_n(lme_model,ref_model)}
+}
 
 # Load CSV file
 prj <- read.csv("prjDetPanel-Jan2011.csv")
