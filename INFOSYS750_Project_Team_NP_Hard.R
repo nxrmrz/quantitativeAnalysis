@@ -112,11 +112,43 @@ prj_miss <- prj[,c(1,2,4,21,22,23)]
 TestMCARNormality(prj_miss)
 # Note: MCAR assumption is rejected, so data could be MAR
 
-
-
 # Summary of main DVs and IVs
 
 # Visual exploration of main DVs
+df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
+
+library("ggplot2")
+
+#watchers over time
+w_o_t <- ggplot(df_5, aes(x=Time, y=watchers, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  geom_point() +
+  geom_smooth()
+w_o_t 
+
+#forks over time (y axis is log10 scaled)
+f_o_t <- ggplot(df_5, aes(x=Time, y=forks, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() +
+  geom_smooth()
+f_o_t 
+
+#members over time (y axis is log10 scaled)
+m_o_t <- ggplot(df_5, aes(x=Time, y=members, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() +
+  geom_smooth()
+m_o_t 
+
+#commits over time (y axis is log10 scaled)
+c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
+  geom_point() + 
+  geom_smooth()
+c_o_t 
 
 # Assumption Checks
 
