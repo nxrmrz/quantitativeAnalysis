@@ -114,7 +114,7 @@ TestMCARNormality(prj_miss)
 
 # Summary of main DVs and IVs
 
-# Visual exploration of main DVs
+# Visual exploration of main DVs. Using 5 projects
 df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
 
 library("ggplot2")
@@ -151,6 +151,8 @@ c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) +
 c_o_t 
 
 # Assumption Checks
+
+
 
 # Transformations
 
