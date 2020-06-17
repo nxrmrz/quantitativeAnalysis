@@ -7,20 +7,24 @@ rm(list = ls(all.names = TRUE))
 # Functions for Model Evaluation
 calc_ICC <- function(lme_umm) {
   var_between <- as.numeric(VarCorr(lme_umm)[1][1]) 
-  var_within <- as.numeric(VarCorr(lme_a)[2][1])
+  var_within <- as.numeric(VarCorr(lme_umm)[2][1])
   ICC <- var_between/(var_between+var_within)
-  print(paste("ICC: ",ICC))
+  print(paste("ICC: ",round(ICC,3)))
 }
 calc_R_sq_e <- function(lme_ugm, lme_umm) {
   ugm_params <- dim(VarCorr(lme_ugm))[1]
   var_within_ugm <- as.numeric(VarCorr(lme_ugm)[ugm_params][1]) 
   var_within_umm <- as.numeric(VarCorr(lme_umm)[2][1]) 
   R_sq_e <- 1-(var_within_ugm/var_within_umm)
-  print(paste("R_sq_e: ",R_sq_e))
+  print(paste("R_sq_e: ",round(R_sq_e,3)))
   aic_ugm <- summary(lme_ugm)$AIC
   aic_umm <- summary(lme_umm)$AIC
-  aic_chg <- aic_ugm-aic_umm
-  print(paste("AIC Change: ",aic_chg))
+  aic_chg <- -(aic_ugm-aic_umm)
+  new_eval <- ifelse(aic_chg>=10,"Very Strong",
+                     ifelse(aic_chg>=6,"Strong",
+                            ifelse(aic_chg>=2,"Positive",
+                                   ifelse(aic_chg>=0,"Weak","BAD"))))
+  print(paste("AIC Reduction: ",round(aic_chg,3), "Evaluation: ",new_eval))
 }
 calc_R_sq_n <- function(lme_new, lme_ugm) {
   new_params <- dim(VarCorr(lme_new))[1]
@@ -30,15 +34,31 @@ calc_R_sq_n <- function(lme_new, lme_ugm) {
       var_between_new <- as.numeric(VarCorr(lme_new)[i])
       var_between_ugm <- as.numeric(VarCorr(lme_ugm)[i])
       R_sq_n <- 1-(var_between_new/var_between_ugm)
-      print(paste("R_sq_",i-1,": ",R_sq_n))
+      print(paste("R_sq_",i-1,": ",round(R_sq_n,3)))
     }
     aic_new <- summary(lme_new)$AIC
     aic_ugm <- summary(lme_ugm)$AIC
-    aic_chg <- aic_new-aic_ugm
-    print(paste("AIC Change: ",aic_chg))
+    aic_chg <- -(aic_new-aic_ugm)
+    new_eval <- ifelse(aic_chg>=10,"Very Strong",
+                       ifelse(aic_chg>=6,"Strong",
+                              ifelse(aic_chg>=2,"Positive",
+                                     ifelse(aic_chg>=0,"Weak","BAD"))))
+    print(paste("AIC Reduction: ",round(aic_chg,3), "Evaluation: ",new_eval))
   } else{
     print("Models have different number of parameters")
   }
+}
+summary_lme <- function(lme_model, type, ref_model) {
+  sum_model <-summary(lme_model) 
+  print(round(sum_model$tTable[, c(1,5)],3))
+  print(VarCorr(lme_model))
+  print(paste("AIC: ",round(sum_model$AIC,0)))
+  print(paste("BIC: ",round(sum_model$BIC,0)))
+  print(paste("LogLik: ",round(sum_model$logLik,0)))
+  print(paste("Deviance: ",round(-2*sum_model$logLik,0)))
+  if(type==1){calc_ICC(lme_model)}
+  if(type==2){calc_R_sq_e(lme_model,ref_model)}
+  if(type==3){calc_R_sq_n(lme_model,ref_model)}
 }
 
 # Load CSV file
@@ -99,6 +119,8 @@ colSums(is.na(prj))!=0
 # Identify patterns of missing data
 library(dplyr)
 library(finalfit)
+prj %>%
+  missing_pattern("prjId", c("PRClosedTime", "IssueClosedTime", "Health"))
 prj %>%
   missing_compare("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
 prj %>%

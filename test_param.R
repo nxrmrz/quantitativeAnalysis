@@ -360,8 +360,6 @@ prj_miss %>%
                    fill = IssueClosedTime_NA)) + 
         geom_density(alpha = 0.5)
 
-# License: Blank vs Non-Blank
-prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
 
 summary(lme(members~Time, prj, random=~Time|prjId))
 summary(lme(commits~Time, prj, random=~Time|prjId))
@@ -413,46 +411,6 @@ prj$nonMemCommittersRatio <- ifelse(prj$committers==0,0,(prj$nonMemCommitters/pr
 head(prj[,-c(3,5,6,24,25,28)])
 round(cor(prj[,-c(3,5,6,24,25,28)]),2)
 
-# Functions for Model Evaluation
-calc_ICC <- function(lme_umm) {
-        var_between <- as.numeric(VarCorr(lme_umm)[1][1]) 
-        var_within <- as.numeric(VarCorr(lme_a)[2][1])
-        ICC <- var_between/(var_between+var_within)
-        print(paste("ICC: ",ICC))
-        return(TRUE)
-}
-calc_R_sq_e <- function(lme_ugm, lme_umm) {
-        ugm_params <- dim(VarCorr(lme_ugm))[1]
-        var_within_ugm <- as.numeric(VarCorr(lme_ugm)[ugm_params][1]) 
-        var_within_umm <- as.numeric(VarCorr(lme_umm)[2][1]) 
-        R_sq_e <- 1-(var_within_ugm/var_within_umm)
-        print(paste("R_sq_e: ",R_sq_e))
-        aic_ugm <- summary(lme_ugm)$AIC
-        aic_umm <- summary(lme_umm)$AIC
-        aic_chg <- aic_ugm-aic_umm
-        print(paste("AIC Change: ",aic_chg))
-        return(TRUE)
-}
-calc_R_sq_n <- function(lme_new, lme_ugm) {
-        new_params <- dim(VarCorr(lme_new))[1]
-        ugm_params <- dim(VarCorr(lme_ugm))[1]
-        if(new_params==ugm_params){
-                for(i in 1:(ugm_params-1)) {
-                        var_between_new <- as.numeric(VarCorr(lme_new)[i])
-                        var_between_ugm <- as.numeric(VarCorr(lme_ugm)[i])
-                        R_sq_n <- 1-(var_between_new/var_between_ugm)
-                        print(paste("R_sq_",i-1,": ",R_sq_n))
-                }
-                aic_new <- summary(lme_new)$AIC
-                aic_ugm <- summary(lme_ugm)$AIC
-                aic_chg <- aic_new-aic_ugm
-                print(paste("AIC Change: ",aic_chg))
-                return(TRUE)
-        } else{
-                print("Models have different number of parameters")
-                return(FALSE)
-        }
-}
 
 hist(prj$watchers)
 hist(log(prj$watchers))
@@ -460,49 +418,90 @@ hist(log(log(prj$watchers)))
 hist(sqrt(prj$watchers))
 hist(sqrt(sqrt(prj$watchers)))
 
+# License: Blank vs Non-Blank
+prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
+# License: MIT vs Non-MIT
+prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
+# Health: Set NA to 0
+prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
-# Spectator Interest: Watchers, OwnerFollower, AvgFollower
+str(prj)
+
+prj_noF <- prj[,-which(sapply(prj, class) == "factor")]
+
+round(cor(prj_noF),2)
+round(cor(prj_noF[,-c(18,19,20)]),2)
+
+library(corrplot)
+corrplot(cor(prj_noF[,-c(18,19,20)]))
+round(cor(prj_noF[,-c(18,19,20)]),2)[,8]
+sort(round(cor(prj_noF[,-c(18,19,20)]),2)[,8])
+
+install.packages("corrr", quiet=TRUE)
+library(corrr)
+prj_noF %>% correlate() %>% focus(watchers)
+
+library(nlme) # lme
+
+# Spectator Interest (A): Watchers (1), OwnerFollower (2), AvgFollower (3)
 lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
-summary(lme_A1m)
-calc_ICC(lme_A1m)
-dim(lme_A1m$residuals)
-dim(prj$obsCode)
-plot(lme_A1m$residuals, prj$obsCode)
-head(lme_A1m$residuals)
-
 lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1)
-calc_R_sq_e(lme_A1g1, lme_A1m)
-lme_A1g1a <- lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1a)
-calc_R_sq_n(lme_A1g1a, lme_A1g1)
-lme_A1g1b <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1b)
-calc_R_sq_n(lme_A1g1b, lme_A1g1)
-lme_A1g1c <- lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1c)
-calc_R_sq_n(lme_A1g1c, lme_A1g1)
-lme_A1g1d <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1d)
-calc_R_sq_n(lme_A1g1d, lme_A1g1)
-lme_A1g1e <- lme(watchers~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
-# Does not converge
-lme_A1g1f <- lme(watchers~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1f)
-calc_R_sq_n(lme_A1g1f, lme_A1g1)
-lme_A1g1g <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1g)
-calc_R_sq_n(lme_A1g1g, lme_A1g1)
-lme_A1g1h <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
-summary(lme_A1g1h)
-calc_R_sq_n(lme_A1g1h, lme_A1g1)
-lme_A1g2 <- lme(watchers~issues, prj, random=~issues|prjId, method="ML")
-summary(lme_A1g2)
-calc_R_sq_e(lme_A1g2, lme_A1m)
-calc_R_sq_n(lme_A1g2, lme_A1g1)
-lme_A1g3 <- lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML")
-summary(lme_A1g3)
-calc_R_sq_e(lme_A1g3, lme_A1m)
+lme_A1g1aI <- lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML")
+lme_A1g1aG <- lme(watchers~Time+Time:Licence, prj, random=~Time|prjId, method="ML")
+lme_A1g1aB <- lme(watchers~Time*Licence, prj, random=~Time|prjId, method="ML")
+lme_A1g1bI <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_A1g1bG <- lme(watchers~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_A1g1bB <- lme(watchers~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_A1g1cI <- lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
+lme_A1g1cG <- lme(watchers~Time+Time:dummyLicence2, prj, random=~Time|prjId, method="ML")
+lme_A1g1cB <- lme(watchers~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
+lme_A1g1dI <- lme(watchers~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_A1g1dG <- lme(watchers~Time+Time:dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_A1g1dB <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_A1g1eI <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
+lme_A1g1eG <- lme(watchers~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
+lme_A1g1eB <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_A1m, 1)
+summary_lme(lme_A1g1, 2, lme_A1m)
+summary_lme(lme_A1g1aI, 3, lme_A1g1)
+summary_lme(lme_A1g1aG, 3, lme_A1g1)
+summary_lme(lme_A1g1aB, 3, lme_A1g1)
+summary_lme(lme_A1g1bI, 3, lme_A1g1)
+summary_lme(lme_A1g1bG, 3, lme_A1g1)
+summary_lme(lme_A1g1cI, 3, lme_A1g1)
+summary_lme(lme_A1g1cG, 3, lme_A1g1)
+summary_lme(lme_A1g1cB, 3, lme_A1g1)
+summary_lme(lme_A1g1dI, 3, lme_A1g1)
+summary_lme(lme_A1g1dG, 3, lme_A1g1)
+summary_lme(lme_A1g1dB, 3, lme_A1g1)
+summary_lme(lme_A1g1eI, 3, lme_A1g1)
+summary_lme(lme_A1g1eG, 3, lme_A1g1)
+summary_lme(lme_A1g1eB, 3, lme_A1g1)
+# Corr for watchers: forks, issues, commits
+lme_A1g2 <- lme(watchers~forks, prj, random=~forks|prjId, method="ML")
+lme_A1g3 <- lme(watchers~issues, prj, random=~issues|prjId, method="ML")
+lme_A1g4 <- lme(watchers~commits, prj, random=~commits|prjId, method="ML")
+summary_lme(lme_A1g2, 2, lme_A1m)
+summary_lme(lme_A1g3, 2, lme_A1m)
+summary_lme(lme_A1g4, 2, lme_A1m)
+
+lme_A1g5 <- lme(watchers~Time+Time:commits, prj, random=~Time+commits|prjId, method="ML")
+lme_A1g5cB <- lme(watchers~Time*dummyLicence2+Time:commits, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_A1g5cB, 3, lme_A1g1)
+# Functions for Model Evaluation
+
+summary_lme(lme_A1m,1)
+summary_lme(lme_A1g1,2,lme_A1m)
+summary_lme(lme_A1g1aI,3,lme_A1g1)
+summary_lme(lme_A1g1aG,3,lme_A1g1)
+summary_lme(lme_A1g1aB,3,lme_A1g1)
+summary_lme(lme_A1g1bI,3,lme_A1g1)
+summary_lme(lme_A1g1bG,3,lme_A1g1)
+summary_lme(lme_A1g1bB,3,lme_A1g1)
+
+a$tTable[,c(1,5)]
+
+calc_R_sq_e(lme_A1g5, lme_A1m)
 lme_A1g3a <- lme(watchers~Time+issues+Licence, prj, random=~Time+issues|prjId, method="ML")
 summary(lme_A1g3a)
 calc_R_sq_n(lme_A1g3a, lme_A1g3)
@@ -520,6 +519,8 @@ summary(lme_A1g3e)
 calc_R_sq_n(lme_A1g3e, lme_A1g3)
 # Does not converge
 
+summary(lme(watchers~1, prj, random=~1|prjId, method="ML"))
+
 
 summary()
 summary()
@@ -529,8 +530,21 @@ summary(lme(watchers~Time+issues, prj, random=~Time+issues|prjId, method="ML"))
 summary(lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML"))
 summary()
 
-prj$dummyLicence2 <- ifelse(prj$Licence %in% c("Apache License 2.0", "MIT License"),1,0)
 summary(lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML"))
 
-prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
+prj %>%
+        missing_pattern("prjId", c("PRClosedTime", "IssueClosedTime", "Health"))
+
+prj %>%
+        ff_glimpse("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+prj %>%
+        missing_pattern("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+prj %>%
+        missing_compare("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+
+
+dim(lme_A1m$residuals)
+dim(prj$obsCode)
+plot(lme_A1m$residuals, prj$obsCode)
+head(lme_A1m$residuals)
