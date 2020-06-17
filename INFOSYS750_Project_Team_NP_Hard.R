@@ -131,7 +131,7 @@ prj %>%
 # Check MCAR assumption
 library(MissMech)
 prj_miss <- prj[,c(1,2,4,21,22,23)]
-TestMCARNormality(prj_miss)
+TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Note: MCAR assumption is rejected, so data could be MAR
 
 # Summary of main DVs and IVs
