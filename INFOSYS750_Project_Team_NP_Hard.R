@@ -175,7 +175,6 @@ c_o_t
 # Assumption Checks
 
 
-
 # Transformations
 
 # RQ1
@@ -220,7 +219,7 @@ ot_o_t <- ggplot(df_5, aes(x=Time, y=OwnerType, color=as.factor(prjId))) +
 ot_o_t
 
 #RELATIONSHIPS BETWEEN VARIABLES
-#watchers over time, influenced by health, licence, owner type (SPECTATOR INTEREST)
+#watchers over time, influenced by TIME INVARIANT VARIABLES health, licence, owner type (SPECTATOR INTEREST)
 w_withHealth_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=Health)) + 
   scale_y_continuous(trans="log10") + 
   labs(title="Watchers Over Time Influenced By Health") + 
@@ -241,7 +240,7 @@ w_withOwnerType_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=OwnerType)) +
   geom_smooth()
 w_withOwnerType_ot
 
-#issues over time, influenced by health, owner type, licence (ADOPTER INTEREST)
+#issues over time, influenced by IME INVARIANT VARIABLES, health, owner type, licence (ADOPTER INTEREST)
 (ggplot(df_5, aes(x=Time, y=issues, color=Health)) + 
   labs(title="Issues Over Time Influenced By Health") + 
   geom_point() + 
@@ -257,7 +256,7 @@ w_withOwnerType_ot
     geom_point() + 
     geom_smooth())
 
-#pull requests over time, influenced by health, owner type, licence (PROJECT ACTIVITY)
+#pull requests over time, nfluenced by TIME INVARIANT VARIABLES health, owner type, licence (PROJECT ACTIVITY)
 (ggplot(df_5, aes(x=Time, y=pullReq, color=Health)) + 
     labs(title="Pull Requests Over Time Influenced By Health") + 
     geom_point() + 
@@ -272,5 +271,8 @@ w_withOwnerType_ot
     labs(title="Pull Requests Over Time Influenced By OwnerType") + 
     geom_point() + 
     geom_smooth())
+
+
+
 
 # END
