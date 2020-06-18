@@ -631,6 +631,52 @@ summary_lme(lme_B4g1eB, 3, lme_B4g1)
 # Project Activity (C): Commits (1), IssueClosedCount (2), PullReq (3)
 lme_C1m <- lme(commits~1, prj, random=~1|prjId, method="ML")
 summary_lme(lme_C1m, 1)
+
+plot(lme_C1m)
+plot(lme_C1g1)
+plot(lme_C1g1dB)
+
+boxplot(watchers ~ dummyLicence2, data = prj)
+boxplot(watchers ~ Time, data = prj)
+boxplot(watchers ~ dummyLicence2*Time, data = prj)
+
+library(nparLD)
+#A-1
+plot(nparLD(watchers ~ Time, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(watchers ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(watchers ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(watchers ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+#B-1
+plot(nparLD(issues ~ Time, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(issues ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(issues ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(issues ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+#B-2
+plot(nparLD(forks ~ Time, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(forks ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(forks ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(forks ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+#C-1
+plot(nparLD(commits ~ Time, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(commits ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(commits ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+plot(nparLD(commits ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+
+prj$dummyCommits <- log(prj$commits+1)
+plot(nparLD(dummyCommits ~ dummyLicence1*Time, data = prj,
+            subject = "prjId", description = FALSE))
+
+head(residuals(lme_C1m))
+head(random.effects(lme_C1m)[[1]])
+head(residuals(lme_C1g1))
+head(random.effects(lme_C1g1))
+head(random.effects(lme_C1g1)[[1]])
+head(random.effects(lme_C1g1)[[2]])
+head(residuals(lme_C1g1bB))
+head(random.effects(lme_C1g1bB))
+head(random.effects(lme_C1g1bB)[[1]])
+head(random.effects(lme_C1g1bB)[[2]])
+
 lme_C1g1 <- lme(commits~Time, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1, 2, lme_C1m)
 lme_C1g1aB <- lme(commits~Time*Licence, prj, random=~Time|prjId, method="ML")
