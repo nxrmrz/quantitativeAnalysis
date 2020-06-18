@@ -143,6 +143,7 @@ library("ggplot2")
 
 #watchers over time
 w_o_t <- ggplot(df_5, aes(x=Time, y=watchers, color=as.factor(prjId))) + 
+  labs(title="Watchers Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   geom_point() +
   geom_smooth()
@@ -150,6 +151,7 @@ w_o_t
 
 #forks over time (y axis is log10 scaled)
 f_o_t <- ggplot(df_5, aes(x=Time, y=forks, color=as.factor(prjId))) + 
+  labs(title="Forks Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() +
@@ -158,6 +160,7 @@ f_o_t
 
 #members over time (y axis is log10 scaled)
 m_o_t <- ggplot(df_5, aes(x=Time, y=members, color=as.factor(prjId))) + 
+  labs(title="Members Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() +
@@ -166,6 +169,7 @@ m_o_t
 
 #commits over time (y axis is log10 scaled)
 c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) + 
+  labs(title="Commits Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() + 
