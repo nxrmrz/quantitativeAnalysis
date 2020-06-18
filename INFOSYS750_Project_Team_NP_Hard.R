@@ -136,13 +136,14 @@ TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 
 # Summary of main DVs and IVs
 
-# Visual exploration of main DVs
+# Visual exploration of main DVs. Using 5 projects
 df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
 
 library("ggplot2")
 
 #watchers over time
 w_o_t <- ggplot(df_5, aes(x=Time, y=watchers, color=as.factor(prjId))) + 
+  labs(title="Watchers Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   geom_point() +
   geom_smooth()
@@ -150,6 +151,7 @@ w_o_t
 
 #forks over time (y axis is log10 scaled)
 f_o_t <- ggplot(df_5, aes(x=Time, y=forks, color=as.factor(prjId))) + 
+  labs(title="Forks Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() +
@@ -158,6 +160,7 @@ f_o_t
 
 #members over time (y axis is log10 scaled)
 m_o_t <- ggplot(df_5, aes(x=Time, y=members, color=as.factor(prjId))) + 
+  labs(title="Members Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() +
@@ -166,6 +169,7 @@ m_o_t
 
 #commits over time (y axis is log10 scaled)
 c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) + 
+  labs(title="Commits Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
   scale_y_continuous(trans="log10") + 
   geom_point() + 
@@ -173,6 +177,7 @@ c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) +
 c_o_t 
 
 # Assumption Checks
+
 
 # Transformations
 
@@ -194,6 +199,84 @@ c_o_t
 # Additional Models
 # Summary for RQ3
 
-# Any visualizations
+# Any visualizations 
+#Time Invariant IVs - Health, Licence, Owner Type
+#health
+h_o_t <- ggplot(df_5, aes(x=Time, y=Health, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  geom_point() +
+  geom_smooth()
+h_o_t
+
+#license type
+l_o_t <- ggplot(df_5, aes(x=Time, y=Licence, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  geom_point() +
+  geom_smooth()
+l_o_t
+
+#owner type
+ot_o_t <- ggplot(df_5, aes(x=Time, y=OwnerType, color=as.factor(prjId))) + 
+  scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  geom_point() +
+  geom_smooth()
+ot_o_t
+
+#RELATIONSHIPS BETWEEN VARIABLES
+#watchers over time, influenced by TIME INVARIANT VARIABLES health, licence, owner type (SPECTATOR INTEREST)
+w_withHealth_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=Health)) + 
+  scale_y_continuous(trans="log10") + 
+  labs(title="Watchers Over Time Influenced By Health") + 
+  geom_point() + 
+  geom_smooth()
+w_withHealth_ot
+
+w_withLicence_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=Licence)) + 
+  labs(title="Watchers Over Time Influenced By Licence") + 
+  geom_point() + 
+  geom_smooth()
+w_withLicence_ot
+
+w_withOwnerType_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=OwnerType)) + 
+  scale_y_continuous(trans="log10") + 
+  labs(title="Watchers Over Time Influenced By Owner Type") + 
+  geom_point() + 
+  geom_smooth()
+w_withOwnerType_ot
+
+#issues over time, influenced by IME INVARIANT VARIABLES, health, owner type, licence (ADOPTER INTEREST)
+(ggplot(df_5, aes(x=Time, y=issues, color=Health)) + 
+  labs(title="Issues Over Time Influenced By Health") + 
+  geom_point() + 
+  geom_smooth())
+
+(ggplot(df_5, aes(x=Time, y=issues, color=OwnerType)) + 
+    labs(title="Issues Over Time Influenced By Owner Type") + 
+    geom_point() + 
+    geom_smooth())
+
+(ggplot(df_5, aes(x=Time, y=issues, color=Licence)) + 
+    labs(title="Issues Over Time Influenced By Licence") + 
+    geom_point() + 
+    geom_smooth())
+
+#pull requests over time, nfluenced by TIME INVARIANT VARIABLES health, owner type, licence (PROJECT ACTIVITY)
+(ggplot(df_5, aes(x=Time, y=pullReq, color=Health)) + 
+    labs(title="Pull Requests Over Time Influenced By Health") + 
+    geom_point() + 
+    geom_smooth())
+
+(ggplot(df_5, aes(x=Time, y=pullReq, color=Licence)) + 
+    labs(title="Pull Requests Over Time Influenced By Licence") + 
+    geom_point() + 
+    geom_smooth())
+
+(ggplot(df_5, aes(x=Time, y=pullReq, color=OwnerType)) + 
+    labs(title="Pull Requests Over Time Influenced By OwnerType") + 
+    geom_point() + 
+    geom_smooth())
+
+
+
 
 # END
