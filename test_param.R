@@ -484,6 +484,8 @@ lme_A1g1dB <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML
 lme_A1g1eI <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_A1g1eG <- lme(watchers~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_A1g1eB <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_A1g1cIdB <- lme(watchers~Time+dummyLicence2+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_A1m, 1)
 summary_lme(lme_A1g1, 2, lme_A1m)
 summary_lme(lme_A1g1aI, 3, lme_A1g1)
@@ -500,6 +502,7 @@ summary_lme(lme_A1g1dB, 3, lme_A1g1)
 summary_lme(lme_A1g1eI, 3, lme_A1g1)
 summary_lme(lme_A1g1eG, 3, lme_A1g1)
 summary_lme(lme_A1g1eB, 3, lme_A1g1)
+summary_lme(lme_A1g1cIdB, 3, lme_A1g1)
 # Corr: Watchers
 sort(round(cor(prj_noF[,-c(18,19,20)]),2)[,8])
 # Corr for watchers: forks, issues, commits
@@ -555,6 +558,8 @@ lme_B1g1dB <- lme(issues~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B1g1eI <- lme(issues~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B1g1eG <- lme(issues~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B1g1eB <- lme(issues~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_B1g1bGdB <- lme(issues~Time+Time:dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_B1m, 1)
 summary_lme(lme_B1g1, 2, lme_B1m)
 summary_lme(lme_B1g1aI, 3, lme_B1g1)
@@ -572,6 +577,7 @@ summary_lme(lme_B1g1dB, 3, lme_B1g1)
 summary_lme(lme_B1g1eI, 3, lme_B1g1)
 summary_lme(lme_B1g1eG, 3, lme_B1g1)
 summary_lme(lme_B1g1eB, 3, lme_B1g1)
+summary_lme(lme_B1g1bGdB, 3, lme_B1g1) # No improvement
 
 lme_B2m <- lme(forks~1, prj, random=~1|prjId, method="ML")
 lme_B2g1 <- lme(forks~Time, prj, random=~Time|prjId, method="ML")
@@ -590,6 +596,8 @@ lme_B2g1dB <- lme(forks~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B2g1eI <- lme(forks~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B2g1eG <- lme(forks~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B2g1eB <- lme(forks~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_B2g1bBdB <- lme(forks~Time*dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_B2m, 1)
 summary_lme(lme_B2g1, 2, lme_B2m)
 summary_lme(lme_B2g1aI, 3, lme_B2g1)
@@ -607,6 +615,7 @@ summary_lme(lme_B2g1dB, 3, lme_B2g1)
 summary_lme(lme_B2g1eI, 3, lme_B2g1)
 summary_lme(lme_B2g1eG, 3, lme_B2g1)
 summary_lme(lme_B2g1eB, 3, lme_B2g1)
+summary_lme(lme_B2g1bBdB, 3, lme_B2g1) # No improvement
 
 
 lme_B3m <- lme(nonMemCommitters~1, prj, random=~1|prjId, method="ML")
@@ -709,6 +718,9 @@ lme_C1g1eI <- lme(commits~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1eI, 3, lme_C1g1)
 lme_C1g1eG <- lme(commits~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1eG, 3, lme_C1g1)
+lme_C1g1bBdB <- lme(commits~Time*dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1bBdB, 3, lme_C1g1)
 
 lme_C2m <- lme(IssueClosedCnt~1, prj, random=~1|prjId, method="ML")
 summary_lme(lme_C2m, 1)

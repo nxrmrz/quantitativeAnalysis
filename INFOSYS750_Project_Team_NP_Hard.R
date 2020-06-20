@@ -181,6 +181,16 @@ c_o_t
 
 # Transformations
 
+
+# Derived Values
+# License: Blank vs Non-Blank
+prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
+# License: MIT vs Non-MIT
+prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
+# Health: Set NA to 0
+prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
+
+
 # RQ1
 lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
 lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
