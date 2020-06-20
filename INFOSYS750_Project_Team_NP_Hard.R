@@ -10,7 +10,9 @@ library("dplyr")
 library("finalfit")
 library("MissMech")
 library("nlme")
-
+library(lattice) # xyplot 
+library(corrplot)
+library(nparLD)
 
 # Functions for Model Evaluation
 calc_ICC <- function(lme_umm) {
@@ -139,6 +141,14 @@ TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Note: MCAR assumption is rejected, so data could be MAR
 
 # Summary of main DVs and IVs
+
+# Derived Values
+# License: Blank vs Non-Blank
+prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
+# License: MIT vs Non-MIT
+prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
+# Health: Set NA to 0
+prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
 # Visual exploration of main DVs. Using 5 projects
 df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
@@ -282,13 +292,6 @@ plot(nparLD(commits ~ Time*OwnerType, data = prj, subject = "prjId", description
 # Transformations
 
 
-# Derived Values
-# License: Blank vs Non-Blank
-prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
-# License: MIT vs Non-MIT
-prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
-# Health: Set NA to 0
-prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
 
 # RQ1
@@ -296,7 +299,7 @@ lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
 lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
 lme_A1g1aI <- lme(watchers~Time+Licence, prj, random=~Time|prjId, method="ML")
 lme_A1g1aG <- lme(watchers~Time+Time:Licence, prj, random=~Time|prjId, method="ML")
-lme_A1g1aB <- lme(watchers~Time*Licence, prj, random=~Time|prjId, method="ML")
+lme_A1g1aB <- lme(watchers~ Time*Licence, prj, random=~Time|prjId, method="ML")
 lme_A1g1bI <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_A1g1bG <- lme(watchers~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_A1g1bB <- lme(watchers~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
