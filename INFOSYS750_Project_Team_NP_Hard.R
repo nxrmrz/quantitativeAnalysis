@@ -3,6 +3,14 @@ rm(list = ls(all.names = TRUE))
 
 # Install Packages
 # Note any special packages & relevant functions needed here
+library("car")
+library("ggplot2")
+library("sqldf")
+library("dplyr")
+library("finalfit")
+library("MissMech")
+library("nlme")
+
 
 # Functions for Model Evaluation
 calc_ICC <- function(lme_umm) {
@@ -96,7 +104,6 @@ summary(prj)
 # Note: obsCode is continuous & prjCode is continuous
 
 # Identify time-invariant columns
-library(sqldf)
 for (col in colnames(prj)) {
   query <- paste("SELECT prjCode, ", col, ", COUNT(1)",
                  " FROM prj",
@@ -117,8 +124,6 @@ sum(colSums(is.na(prj))!=0)
 colSums(is.na(prj))!=0
 # Note: 3 columns have missing data (NA) - PRClosedTime, IssueClosedTime & Health
 # Identify patterns of missing data
-library(dplyr)
-library(finalfit)
 prj %>%
   missing_pattern("prjId", c("PRClosedTime", "IssueClosedTime", "Health"))
 prj %>%
@@ -129,7 +134,6 @@ prj %>%
   missing_compare("Health", c("prjId", "Time", "Licence", "OwnerType"))
 # Note: All cases show significant impact of explanatory variables on missing variables
 # Check MCAR assumption
-library(MissMech)
 prj_miss <- prj[,c(1,2,4,21,22,23)]
 TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Note: MCAR assumption is rejected, so data could be MAR
@@ -139,12 +143,11 @@ TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Visual exploration of main DVs. Using 5 projects
 df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
 
-library("ggplot2")
-
-#watchers over time
+#watchers over time (y axis is log10 scaled)
 w_o_t <- ggplot(df_5, aes(x=Time, y=watchers, color=as.factor(prjId))) + 
   labs(title="Watchers Over Time for 5 Projects") + 
   scale_color_manual(labels = c("1", "2", "3", "4", "5"), values=c("blue", "red", "pink", "green", "yellow")) +
+  scale_y_continuous(trans="log10") + 
   geom_point() +
   geom_smooth()
 w_o_t 
@@ -176,8 +179,105 @@ c_o_t <- ggplot(df_5, aes(x=Time, y=commits, color=as.factor(prjId))) +
   geom_smooth()
 c_o_t 
 
-# Assumption Checks
+#have frequency distributions of measures of research question
+ggplot(prj, aes(watchers)) + geom_histogram() + scale_x_continuous(trans="log10") + labs(title="Histogram of Watchers")
+ggplot(prj, aes(issues)) + geom_histogram() + scale_x_continuous(trans="log10") + labs(title="Histogram of Issues")
+ggplot(prj, aes(forks)) + geom_histogram() + scale_x_continuous(trans="log10") + labs(title="Histogram of Forks")
+ggplot(prj, aes(commits)) + geom_histogram() + scale_x_continuous(trans="log10") + labs(title="Histogram of Commits")
 
+# Assumption Checks
+#https://ademos.people.uic.edu/Chapter18.html#6_assumptions
+
+#define a function that: 1.) models residuals vs observed 2.) models residuals vs fitted 3.) qqnorm 
+visual_assumption_checks <- function(model, dv) {
+  par(mfrow=c(2,2))
+  plot(resid(model), 
+       prj[[dv]], 
+       main="Observed Values vs Residuals",
+       sub="Linearity assumption check",
+       xlab="Model Residuals",
+       ylab="Observations") #checks linearity
+  plot(predict(model),resid(model),
+       main="Residuals vs Fitted",
+       sub="Homoscedasticity assumption check",
+       xlab="Fitted Values",
+       ylab="Model Residuals") #checks homoscedasticity
+  qqnorm(resid(model)) #normality
+  qqline(resid(model))
+}
+
+ggplot(prj, aes(x=Time, y=watchers, color=as.factor(prjId))) + geom_point() + geom_smooth() + scale_y_continuous(trans="log10")
+
+
+#===========INCLUDE BELOW IN ASSUMPTION CHECKS==============
+
+#standardise residuals before plotting & statistical testing
+#creating the standardized residual (std epsilon.hat)
+resid.std <- resid/sd(resid)
+plot(alcohol1$id, resid.std, ylim=c(-3, 3), ylab="std epsilon hat")
+abline(h=0)
+
+#edit later on -
+random.effects(lme_w_oT)[[1]]
+random.effects(lme_w_oT)[[2]]
+
+#further checks
+statistical_assumption_checks <- function(model) {
+  #classic levene's test - test for homogenous residual variances across projects
+  print(leveneTest(resid(model) ~ as.factor(prjId), data=prj))
+  #shapiro wilk to test normality of residuals
+  print(shapiro.test(resid(model)))
+}
+
+#===========INCLUDE ABOVE IN ASSUMPTION CHECKS==============                      
+                        
+#A-1
+
+lme_w_ug <- lme(watchers ~ Time, data = prj, random=~Time|prjId, method="ML")
+visual_assumption_checks(lme_w_ug, "watchers")
+statistical_assumption_checks(lme_w_ug)
+
+#doesnt converge
+lme_w_dL1 <-lme(watchers ~ Time*dummyLicence1, data = prj, random=~Time|prjId, method="ML")
+
+lme_w_dfL2 <- lme(watchers~ Time*dummyLicence2, data = prj, random=~Time|prjId, method="ML")
+visual_assumption_checks(lme_w_dfL2, "watchers")
+statistical_assumption_checks(lme_w_dfL2)
+
+lme_w_oT <- lme(watchers ~ Time*OwnerType, data = prj, random=~Time|prjId, method="ML")
+visual_assumption_checks(lme_w_oT, "watchers")
+statistical_assumption_checks(lme_w_oT)
+summary(lme_w_oT)
+
+#B-1
+
+plot(nparLD(issues ~ Time, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(issues ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(issues ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(issues ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+
+#B-2
+
+plot(nparLD(forks ~ Time, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(forks ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(forks ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(forks ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
+
+#C-1
+
+plot(nparLD(commits ~ Time, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(commits ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(commits ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
+
+plot(nparLD(commits ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
 
 # Transformations
 
@@ -382,8 +482,7 @@ w_withLicence_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=Licence)) +
   geom_smooth()
 w_withLicence_ot
 
-w_withOwnerType_ot <-ggplot(df_5, aes(x=Time, y=watchers, color=OwnerType)) + 
-  scale_y_continuous(trans="log10") + 
+w_withOwnerType_ot <-ggplot(prj, aes(x=Time, y=watchers, color=OwnerType)) + 
   labs(title="Watchers Over Time Influenced By Owner Type") + 
   geom_point() + 
   geom_smooth()
@@ -420,7 +519,6 @@ w_withOwnerType_ot
     labs(title="Pull Requests Over Time Influenced By OwnerType") + 
     geom_point() + 
     geom_smooth())
-
 
 
 
