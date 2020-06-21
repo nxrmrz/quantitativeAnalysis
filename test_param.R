@@ -41,7 +41,6 @@ summary(prj_top_10)
 
 # plot
 plot(members~Time, data=prj_top_10)
-library(lattice) # xyplot 
 xyplot(Health~Time|prjId, data=prj_top_10, layout = c(5,2))
 
 # extract 10 random cases (80 records)
@@ -240,7 +239,6 @@ round(cor(prj[, c(1,4,7:20)]),2)
 
 # Check time variant vs invariant columns
 install.packages("sqldf", quiet=TRUE)
-library(sqldf)
 for (col in colnames(prj)) {
         query <- paste("SELECT prjCode, ", col, ", COUNT(1)",
                        " FROM prj",
@@ -430,13 +428,17 @@ str(prj)
 prj_noF <- prj[,-which(sapply(prj, class) == "factor")]
 round(cor(prj_noF),2)
 round(cor(prj_noF[,-c(18,19,20)]),2)
-library(corrplot)
 corrplot(cor(prj_noF[,-c(18,19,20)]))
 
 install.packages("corrr", quiet=TRUE)
 library(corrr)
 prj_noF %>% correlate() %>% focus(watchers)
 
+install.packages("robustlmm", quiet=TRUE)
+library(robustlmm)
+
+rlmer(watchers ~ 1 + (1|prjId), prj)
+lme(watchers~1, prj, random=~1|prjId, method="ML")
 library(nlme) # lme
 # Check ICC for DVs of interest
 summary_lme(lme(watchers~1, prj, random=~1|prjId, method="ML"), 1)
@@ -484,6 +486,8 @@ lme_A1g1dB <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML
 lme_A1g1eI <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_A1g1eG <- lme(watchers~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_A1g1eB <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_A1g1cIdB <- lme(watchers~Time+dummyLicence2+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_A1m, 1)
 summary_lme(lme_A1g1, 2, lme_A1m)
 summary_lme(lme_A1g1aI, 3, lme_A1g1)
@@ -500,6 +504,7 @@ summary_lme(lme_A1g1dB, 3, lme_A1g1)
 summary_lme(lme_A1g1eI, 3, lme_A1g1)
 summary_lme(lme_A1g1eG, 3, lme_A1g1)
 summary_lme(lme_A1g1eB, 3, lme_A1g1)
+summary_lme(lme_A1g1cIdB, 3, lme_A1g1)
 # Corr: Watchers
 sort(round(cor(prj_noF[,-c(18,19,20)]),2)[,8])
 # Corr for watchers: forks, issues, commits
@@ -555,6 +560,8 @@ lme_B1g1dB <- lme(issues~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B1g1eI <- lme(issues~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B1g1eG <- lme(issues~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B1g1eB <- lme(issues~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_B1g1bGdB <- lme(issues~Time+Time:dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_B1m, 1)
 summary_lme(lme_B1g1, 2, lme_B1m)
 summary_lme(lme_B1g1aI, 3, lme_B1g1)
@@ -572,6 +579,7 @@ summary_lme(lme_B1g1dB, 3, lme_B1g1)
 summary_lme(lme_B1g1eI, 3, lme_B1g1)
 summary_lme(lme_B1g1eG, 3, lme_B1g1)
 summary_lme(lme_B1g1eB, 3, lme_B1g1)
+summary_lme(lme_B1g1bGdB, 3, lme_B1g1) # No improvement
 
 lme_B2m <- lme(forks~1, prj, random=~1|prjId, method="ML")
 lme_B2g1 <- lme(forks~Time, prj, random=~Time|prjId, method="ML")
@@ -590,6 +598,8 @@ lme_B2g1dB <- lme(forks~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B2g1eI <- lme(forks~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B2g1eG <- lme(forks~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 lme_B2g1eB <- lme(forks~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+lme_B2g1bBdB <- lme(forks~Time*dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
 summary_lme(lme_B2m, 1)
 summary_lme(lme_B2g1, 2, lme_B2m)
 summary_lme(lme_B2g1aI, 3, lme_B2g1)
@@ -607,6 +617,7 @@ summary_lme(lme_B2g1dB, 3, lme_B2g1)
 summary_lme(lme_B2g1eI, 3, lme_B2g1)
 summary_lme(lme_B2g1eG, 3, lme_B2g1)
 summary_lme(lme_B2g1eB, 3, lme_B2g1)
+summary_lme(lme_B2g1bBdB, 3, lme_B2g1) # No improvement
 
 
 lme_B3m <- lme(nonMemCommitters~1, prj, random=~1|prjId, method="ML")
@@ -628,9 +639,6 @@ summary_lme(lme_B4g1dB, 3, lme_B4g1)
 lme_B4g1eB <- lme(nonMemCommittersRatio~Time*OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_B4g1eB, 3, lme_B4g1)
 
-# Project Activity (C): Commits (1), IssueClosedCount (2), PullReq (3)
-lme_C1m <- lme(commits~1, prj, random=~1|prjId, method="ML")
-summary_lme(lme_C1m, 1)
 
 plot(lme_C1m)
 plot(lme_C1g1)
@@ -640,7 +648,6 @@ boxplot(watchers ~ dummyLicence2, data = prj)
 boxplot(watchers ~ Time, data = prj)
 boxplot(watchers ~ dummyLicence2*Time, data = prj)
 
-library(nparLD)
 #A-1
 plot(nparLD(watchers ~ Time, data = prj, subject = "prjId", description = FALSE))
 plot(nparLD(watchers ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
@@ -677,6 +684,128 @@ head(random.effects(lme_C1g1bB))
 head(random.effects(lme_C1g1bB)[[1]])
 head(random.effects(lme_C1g1bB)[[2]])
 
+library("nortest")
+
+qqnorm(prj$watchers)
+qqline(prj$watchers)
+shapiro.test(prj$watchers)
+lillie.test(prj$watchers)
+qqnorm(log(prj$watchers+1))
+qqline(log(prj$watchers+1))
+shapiro.test(log(prj$watchers+1))
+lillie.test(log(prj$watchers+1))
+
+qqnorm(prj$issues)
+qqline(prj$issues)
+shapiro.test(prj$issues)
+lillie.test(prj$issues)
+qqnorm(log(prj$issues+1))
+qqline(log(prj$issues+1))
+shapiro.test(log(prj$issues+1))
+lillie.test(log(prj$issues+1))
+
+view_col <- function(col){
+        hist(col)
+        plot(density(col))
+        qqnorm(col)
+        qqline(col)
+        print(shapiro.test(col))
+        print(lillie.test(col))
+}
+
+transform_col <- function(col){
+        col_l <- log(col+1)
+        view_col(col_l)
+        bc <- boxcox(col+1 ~ 1)
+        lambda <- bc$x[which.max(bc$y)]
+        col_t <- (((col+1)^lambda-1)/lambda)
+        view_col(col_t)
+}
+
+view_col(prj$watchers)
+transform_col(prj$watchers)
+view_col(prj$issues)
+transform_col(prj$issues)
+view_col(prj$forks)
+transform_col(prj$forks)
+view_col(prj$commits)
+transform_col(prj$commits)
+
+
+sample <- prj[prj$prjCode %in% sample(unique(prj$prjCode),10),]
+shapiro.test(sample$members)
+
+bc_C1 <- boxcox(prj$commits+1 ~ 1)
+l_C1 <- bc_C1$x[which.max(bc_C1$y)]
+
+prj$bc_commits <- (((prj$commits+1)^l_C1-1)/l_C1)
+
+lme_C1g1dB <- lme(bc_commits~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1dB, 3, lme_C1g1)
+
+
+qqnorm()
+qqline((((prj$commits+1)^l_A1-1)/l_A1))
+shapiro.test((((prj$commits+1)^l_A1-1)/l_A1))
+lillie.test((((prj$commits+1)^l_A1-1)/l_A1))
+
+hist((((prj$commits+1)^lambda-1)/lambda))
+plot(density((((prj$commits+1)^lambda-1)/lambda)))
+
+
+qqnorm(prj$commits)
+qqline(prj$commits)
+shapiro.test(prj$commits)
+lillie.test(prj$commits)
+qqnorm(log(prj$watchers+.07))
+qqline(log(prj$watchers+.07))
+shapiro.test(log(prj$watchers+.07))
+lillie.test(log(prj$commits+.07))
+
+lme_C1g1dB <- lme(log(commits+1)~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1dB, 3, lme_C1g1)
+
+e_ij <- residuals(lme_C1g1dB)
+qqnorm(e_ij)
+qqline(e_ij)
+shapiro.test(e_ij)
+lillie.test(e_ij)
+leveneTest(e_ij, prj$Time)
+z_0i <- random.effects(lme_C1g1dB)[[1]]
+z_1i <- random.effects(lme_C1g1dB)[[2]]
+library(mvnormtest)
+mshapiro.test(t(data.frame(z_0i, z_1i)))
+library(biotools)
+#boxM(random.effects(lme_C1g1dB), prj$dummyHealth)
+plot(prj$Time, e_ij)
+plot(z_0i, z_1i)
+boxM(data.frame(z_0i, z_1i), prj_o$OwnerType)
+
+
+data.frame(z_0i, z_1i)
+head(prj_o)
+
+prj_o <- sqldf("select OwnerType, count(1) from prj group by prjId")
+leveneTest(z_0i, prj_h[[1]])
+length(z_0i)
+length(prj_h[[1]])
+
+hist(1/(prj$watchers+1))
+
+
+
+lme_C1m <- lme(bc_commits~1, prj, random=~1|prjId, method="ML")
+summary_lme(lme_C1m, 1)
+lme_C1g1 <- lme(bc_commits~Time, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1, 2, lme_C1m)
+lme_C1g1dB <- lme(bc_commits~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1dB, 3, lme_C1g1)
+
+
+
+# Project Activity (C): Commits (1), IssueClosedCount (2), PullReq (3)
+lme_C1m <- lme(commits~1, prj, random=~1|prjId, method="ML")
+summary_lme(lme_C1m, 1)
 lme_C1g1 <- lme(commits~Time, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1, 2, lme_C1m)
 lme_C1g1aB <- lme(commits~Time*Licence, prj, random=~Time|prjId, method="ML")
@@ -709,6 +838,9 @@ lme_C1g1eI <- lme(commits~Time+OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1eI, 3, lme_C1g1)
 lme_C1g1eG <- lme(commits~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1g1eG, 3, lme_C1g1)
+lme_C1g1bBdB <- lme(commits~Time*dummyLicence1+Time*dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1bBdB, 3, lme_C1g1)
 
 lme_C2m <- lme(IssueClosedCnt~1, prj, random=~1|prjId, method="ML")
 summary_lme(lme_C2m, 1)
