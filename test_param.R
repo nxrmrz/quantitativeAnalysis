@@ -778,6 +778,7 @@ mshapiro.test(t(data.frame(z_0i, z_1i)))
 library(biotools)
 #boxM(random.effects(lme_C1g1dB), prj$dummyHealth)
 plot(prj$Time, e_ij)
+plot(prj$prjCode, e_ij)
 plot(z_0i, z_1i)
 boxM(data.frame(z_0i, z_1i), prj_o$OwnerType)
 
