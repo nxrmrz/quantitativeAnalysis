@@ -13,6 +13,7 @@ library("nlme")
 library(lattice) # xyplot 
 library(corrplot)
 library(nparLD)
+library("nortest")
 
 # Functions for Model Evaluation
 calc_ICC <- function(lme_umm) {
@@ -70,6 +71,27 @@ summary_lme <- function(lme_model, type, ref_model) {
   if(type==2){calc_R_sq_e(lme_model,ref_model)}
   if(type==3){calc_R_sq_n(lme_model,ref_model)}
 }
+prj_plots <- function(data, type) {
+  ymin<- min(data)-0.1*(max(data)-min(data))
+  ymax<- max(data)+0.1*(max(data)-min(data))
+  if (type==0){
+    xyplot(data~Time|prjId, data=prj_rnd_10, layout = c(5,2))
+  }
+  if (type==1){
+    xyplot(data~Time|prjId, data=prj_rnd_10,
+           panel=function(x,y){
+             panel.xyplot(x, y)
+             panel.loess(x,y, family="gaussian")
+           },ylim=c(ymin,ymax), layout = c(5,2))
+  }
+  if (type==2){
+    xyplot(data~Time|prjId, data=prj_rnd_10,
+           panel=function(x,y){
+             panel.xyplot(x, y)
+             panel.lmline(x,y)
+           },ylim=c(ymin,ymax), layout = c(5,2))
+  }
+}
 
 # Load CSV file
 prj <- read.csv("prjDetPanel-Jan2011.csv")
@@ -118,6 +140,23 @@ for (col in colnames(prj)) {
 }
 # Note: Health, Licence, ContribFile & OwnerType are main time-invariant columns
 
+# List of Licences
+sqldf("select Licence, count(1)
+       from (
+         select prjId, Licence, count(1)
+         from prj
+         group by prjId, Licence)
+       group by Licence
+       order by 2 desc")
+# List of Health
+sqldf("select Health, count(1)
+       from (
+         select prjId, Health, count(1)
+         from prj
+         group by prjId, Health)
+       group by Health
+       order by 2 desc")
+
 # Find missing data
 table(complete.cases(prj))
 table(is.na(prj))
@@ -137,7 +176,7 @@ prj %>%
 # Note: All cases show significant impact of explanatory variables on missing variables
 # Check MCAR assumption
 prj_miss <- prj[,c(1,2,4,21,22,23)]
-TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
+#TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Note: MCAR assumption is rejected, so data could be MAR
 
 # Summary of main DVs and IVs
@@ -146,9 +185,17 @@ TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # License: Blank vs Non-Blank
 prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
 # License: MIT vs Non-MIT
-prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
+#prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
 # Health: Set NA to 0
 prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
+
+# extract 10 random cases (80 records)
+prj_rnd_10<-prj[prj$prjId %in% sample(unique(prj$prjId),10), ]
+# Display 4 DVs against time for 10 selected projects
+prj_plots(prj_rnd_10$watchers,2)
+prj_plots(prj_rnd_10$issues,2)
+prj_plots(prj_rnd_10$forks,2)
+prj_plots(prj_rnd_10$commits,2)
 
 # Visual exploration of main DVs. Using 5 projects
 df_5 <-prj[prj$prjId %in% c(2647, 3085, 3671, 3721, 5378), ]
@@ -446,6 +493,24 @@ summary_lme(lme_C1g1eB, 3, lme_C1g1)
 # UGM
 # Additional Models
 # Summary for RQ3
+
+# Visualization Plots for Models
+fixef <- fixef(lme_A1g1bGdI)
+fit_L0_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+fit_L0_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+plot(prj$Time[1:8], fit_L0_H25, ylim=c(0, 5), type="b", pch=0,
+     ylab="Predicted Values: ln(watchers+1)", xlab="Time")  
+lines(prj$Time[1:8], fit_L1_H25, type="b", pch=15)   
+lines(prj$Time[1:8], fit_L0_H75, type="b", pch=1)   
+lines(prj$Time[1:8], fit_L1_H75, type="b", pch=16) 
+title("Final Model: controlled effects of Licence") 
+legend(1, 3.5, c("No Licence, Health=25", "No Licence, Health=75", 
+                 "Licence, Health=25", "Licence, Health=75"),
+       pch=c(0,15,1,16))
+
+
 
 # Any visualizations 
 #Time Invariant IVs - Health, Licence, Owner Type
