@@ -1,19 +1,18 @@
 # Clear all variables in the environment
 rm(list = ls(all.names = TRUE))
 
-# Install Packages
-# Note any special packages & relevant functions needed here
-library("car")
-library("ggplot2")
-library("sqldf")
-library("dplyr")
-library("finalfit")
-library("MissMech")
-library("nlme")
-library(lattice) # xyplot 
+# Load relevant packages
+library(car)
+library(ggplot2)
+library(sqldf)
+library(dplyr)
+library(finalfit)
+library(MissMech)
+library(nlme)
+library(lattice)
 library(corrplot)
 library(nparLD)
-library("nortest")
+library(nortest)
 
 # Functions for Model Evaluation
 calc_ICC <- function(lme_umm) {
@@ -71,6 +70,8 @@ summary_lme <- function(lme_model, type, ref_model) {
   if(type==2){calc_R_sq_e(lme_model,ref_model)}
   if(type==3){calc_R_sq_n(lme_model,ref_model)}
 }
+
+# Function for sample plots on random data
 prj_plots <- function(data, type) {
   ymin<- min(data)-0.1*(max(data)-min(data))
   ymax<- max(data)+0.1*(max(data)-min(data))
@@ -91,6 +92,31 @@ prj_plots <- function(data, type) {
              panel.lmline(x,y)
            },ylim=c(ymin,ymax), layout = c(5,2))
   }
+}
+
+#define a function that: 1.) models residuals vs observed 2.) models residuals vs fitted 3.) qqnorm 
+visual_assumption_checks <- function(model, dv) {
+  par(mfrow=c(2,2))
+  plot(resid(model), 
+       prj[[dv]], 
+       main="Observed Values vs Residuals",
+       sub="Linearity assumption check",
+       xlab="Model Residuals",
+       ylab="Observations") #checks linearity
+  plot(predict(model),resid(model),
+       main="Residuals vs Fitted",
+       sub="Homoscedasticity assumption check",
+       xlab="Fitted Values",
+       ylab="Model Residuals") #checks homoscedasticity
+  qqnorm(resid(model)) #normality
+  qqline(resid(model))
+}
+#further checks
+statistical_assumption_checks <- function(model) {
+  #classic levene's test - test for homogenous residual variances across projects
+  print(leveneTest(resid(model) ~ as.factor(prjId), data=prj))
+  #shapiro wilk to test normality of residuals
+  print(shapiro.test(resid(model)))
 }
 
 # Load CSV file
@@ -157,6 +183,12 @@ sqldf("select Health, count(1)
        group by Health
        order by 2 desc")
 
+# Derived Values
+# License: Blank vs Non-Blank
+prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
+# Health: Set NA to 0
+prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
+
 # Find missing data
 table(complete.cases(prj))
 table(is.na(prj))
@@ -168,26 +200,15 @@ colSums(is.na(prj))!=0
 prj %>%
   missing_pattern("prjId", c("PRClosedTime", "IssueClosedTime", "Health"))
 prj %>%
-  missing_compare("PRClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+  missing_compare("PRClosedTime", c("prjId", "Time", "dummyHealth", "dummyLicence1", "OwnerType"))
 prj %>%
-  missing_compare("IssueClosedTime", c("prjId", "Time", "Health", "Licence", "OwnerType"))
+  missing_compare("IssueClosedTime", c("prjId", "Time", "dummyHealth", "dummyLicence1", "OwnerType"))
 prj %>%
-  missing_compare("Health", c("prjId", "Time", "Licence", "OwnerType"))
+  missing_compare("Health", c("prjId", "Time", "dummyLicence1", "OwnerType"))
 # Note: All cases show significant impact of explanatory variables on missing variables
-# Check MCAR assumption
-prj_miss <- prj[,c(1,2,4,21,22,23)]
+
 #TestMCARNormality(prj_miss) # WARNING: This functions takes a long time to run
 # Note: MCAR assumption is rejected, so data could be MAR
-
-# Summary of main DVs and IVs
-
-# Derived Values
-# License: Blank vs Non-Blank
-prj$dummyLicence1 <- ifelse(prj$Licence=="",0,1)
-# License: MIT vs Non-MIT
-#prj$dummyLicence2 <- ifelse(prj$Licence=="MIT License",1,0)
-# Health: Set NA to 0
-prj$dummyHealth <- ifelse(is.na(prj$Health),0,prj$Health)
 
 # extract 10 random cases (80 records)
 prj_rnd_10<-prj[prj$prjId %in% sample(unique(prj$prjId),10), ]
@@ -245,101 +266,38 @@ ggplot(prj, aes(commits)) + geom_histogram() + scale_x_continuous(trans="log10")
 # Assumption Checks
 #https://ademos.people.uic.edu/Chapter18.html#6_assumptions
 
-#define a function that: 1.) models residuals vs observed 2.) models residuals vs fitted 3.) qqnorm 
-visual_assumption_checks <- function(model, dv) {
-  par(mfrow=c(2,2))
-  plot(resid(model), 
-       prj[[dv]], 
-       main="Observed Values vs Residuals",
-       sub="Linearity assumption check",
-       xlab="Model Residuals",
-       ylab="Observations") #checks linearity
-  plot(predict(model),resid(model),
-       main="Residuals vs Fitted",
-       sub="Homoscedasticity assumption check",
-       xlab="Fitted Values",
-       ylab="Model Residuals") #checks homoscedasticity
-  qqnorm(resid(model)) #normality
-  qqline(resid(model))
-}
-
+# the next step takes a long time to run
 ggplot(prj, aes(x=Time, y=watchers, color=as.factor(prjId))) + geom_point() + geom_smooth() + scale_y_continuous(trans="log10")
 
-
-#===========INCLUDE BELOW IN ASSUMPTION CHECKS==============
-
-#standardise residuals before plotting & statistical testing
-#creating the standardized residual (std epsilon.hat)
-resid.std <- resid/sd(resid)
-plot(alcohol1$id, resid.std, ylim=c(-3, 3), ylab="std epsilon hat")
-abline(h=0)
-
-#edit later on -
-random.effects(lme_w_oT)[[1]]
-random.effects(lme_w_oT)[[2]]
-
-#further checks
-statistical_assumption_checks <- function(model) {
-  #classic levene's test - test for homogenous residual variances across projects
-  print(leveneTest(resid(model) ~ as.factor(prjId), data=prj))
-  #shapiro wilk to test normality of residuals
-  print(shapiro.test(resid(model)))
-}
-
-#===========INCLUDE ABOVE IN ASSUMPTION CHECKS==============                      
-                        
-#A-1
-
+# A-1
 lme_w_ug <- lme(watchers ~ Time, data = prj, random=~Time|prjId, method="ML")
 visual_assumption_checks(lme_w_ug, "watchers")
 statistical_assumption_checks(lme_w_ug)
 
-#doesnt converge
+# doesnt converge
 lme_w_dL1 <-lme(watchers ~ Time*dummyLicence1, data = prj, random=~Time|prjId, method="ML")
-
-lme_w_dfL2 <- lme(watchers~ Time*dummyLicence2, data = prj, random=~Time|prjId, method="ML")
-visual_assumption_checks(lme_w_dfL2, "watchers")
-statistical_assumption_checks(lme_w_dfL2)
 
 lme_w_oT <- lme(watchers ~ Time*OwnerType, data = prj, random=~Time|prjId, method="ML")
 visual_assumption_checks(lme_w_oT, "watchers")
 statistical_assumption_checks(lme_w_oT)
 summary(lme_w_oT)
 
+par(mfrow=c(1,1))
+
 #B-1
-
 plot(nparLD(issues ~ Time, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(issues ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
-
-plot(nparLD(issues ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(issues ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
 
 #B-2
-
 plot(nparLD(forks ~ Time, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(forks ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
-
-plot(nparLD(forks ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(forks ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
 
 #C-1
-
 plot(nparLD(commits ~ Time, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(commits ~ Time*dummyLicence1, data = prj, subject = "prjId", description = FALSE))
-
-plot(nparLD(commits ~ Time*dummyLicence2, data = prj, subject = "prjId", description = FALSE))
-
 plot(nparLD(commits ~ Time*OwnerType, data = prj, subject = "prjId", description = FALSE))
-
-# Transformations
-
-
-
 
 # RQ1
 lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
@@ -349,11 +307,8 @@ lme_A1g1aG <- lme(watchers~Time+Time:Licence, prj, random=~Time|prjId, method="M
 lme_A1g1aB <- lme(watchers~ Time*Licence, prj, random=~Time|prjId, method="ML")
 lme_A1g1bI <- lme(watchers~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_A1g1bG <- lme(watchers~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
-lme_A1g1bB <- lme(watchers~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
-lme_A1g1cI <- lme(watchers~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_A1g1cG <- lme(watchers~Time+Time:dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_A1g1cB <- lme(watchers~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_A1g1dI <- lme(watchers~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_A1g1bB <- lme(watchers~Time*dummyLicence1, prj, random=~Time|prjId, method="ML") # doesn't converge
+lme_A1g1dI <- lme(watchers~Time+dummyHealth, prj, random=~Time|prjId, method="ML") # doesn't converge
 lme_A1g1dG <- lme(watchers~Time+Time:dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_A1g1dB <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_A1g1eI <- lme(watchers~Time+OwnerType, prj, random=~Time|prjId, method="ML")
@@ -366,19 +321,11 @@ summary_lme(lme_A1g1aG, 3, lme_A1g1)
 summary_lme(lme_A1g1aB, 3, lme_A1g1)
 summary_lme(lme_A1g1bI, 3, lme_A1g1)
 summary_lme(lme_A1g1bG, 3, lme_A1g1)
-summary_lme(lme_A1g1cI, 3, lme_A1g1)
-summary_lme(lme_A1g1cG, 3, lme_A1g1)
-summary_lme(lme_A1g1cB, 3, lme_A1g1)
-summary_lme(lme_A1g1dI, 3, lme_A1g1)
 summary_lme(lme_A1g1dG, 3, lme_A1g1)
 summary_lme(lme_A1g1dB, 3, lme_A1g1)
 summary_lme(lme_A1g1eI, 3, lme_A1g1)
 summary_lme(lme_A1g1eG, 3, lme_A1g1)
 summary_lme(lme_A1g1eB, 3, lme_A1g1)
-# UMM
-# UGM
-# Additional Models
-# Summary for RQ1
 
 # RQ2
 lme_B1m <- lme(issues~1, prj, random=~1|prjId, method="ML")
@@ -389,9 +336,6 @@ lme_B1g1aB <- lme(issues~Time*Licence, prj, random=~Time|prjId, method="ML")
 lme_B1g1bI <- lme(issues~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_B1g1bG <- lme(issues~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_B1g1bB <- lme(issues~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
-lme_B1g1cI <- lme(issues~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_B1g1cG <- lme(issues~Time+Time:dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_B1g1cB <- lme(issues~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
 lme_B1g1dI <- lme(issues~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B1g1dG <- lme(issues~Time+Time:dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B1g1dB <- lme(issues~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
@@ -406,9 +350,6 @@ summary_lme(lme_B1g1aB, 3, lme_B1g1)
 summary_lme(lme_B1g1bI, 3, lme_B1g1)
 summary_lme(lme_B1g1bG, 3, lme_B1g1)
 summary_lme(lme_B1g1bB, 3, lme_B1g1)
-summary_lme(lme_B1g1cI, 3, lme_B1g1)
-summary_lme(lme_B1g1cG, 3, lme_B1g1)
-summary_lme(lme_B1g1cB, 3, lme_B1g1)
 summary_lme(lme_B1g1dI, 3, lme_B1g1)
 summary_lme(lme_B1g1dG, 3, lme_B1g1)
 summary_lme(lme_B1g1dB, 3, lme_B1g1)
@@ -423,9 +364,6 @@ lme_B2g1aB <- lme(forks~Time*Licence, prj, random=~Time|prjId, method="ML")
 lme_B2g1bI <- lme(forks~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_B2g1bG <- lme(forks~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_B2g1bB <- lme(forks~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
-lme_B2g1cI <- lme(forks~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_B2g1cG <- lme(forks~Time+Time:dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_B2g1cB <- lme(forks~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
 lme_B2g1dI <- lme(forks~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B2g1dG <- lme(forks~Time+Time:dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_B2g1dB <- lme(forks~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
@@ -440,19 +378,12 @@ summary_lme(lme_B2g1aB, 3, lme_B2g1)
 summary_lme(lme_B2g1bI, 3, lme_B2g1)
 summary_lme(lme_B2g1bG, 3, lme_B2g1)
 summary_lme(lme_B2g1bB, 3, lme_B2g1)
-summary_lme(lme_B2g1cI, 3, lme_B2g1)
-summary_lme(lme_B2g1cG, 3, lme_B2g1)
-summary_lme(lme_B2g1cB, 3, lme_B2g1)
 summary_lme(lme_B2g1dI, 3, lme_B2g1)
 summary_lme(lme_B2g1dG, 3, lme_B2g1)
 summary_lme(lme_B2g1dB, 3, lme_B2g1)
 summary_lme(lme_B2g1eI, 3, lme_B2g1)
 summary_lme(lme_B2g1eG, 3, lme_B2g1)
 summary_lme(lme_B2g1eB, 3, lme_B2g1)
-# UMM
-# UGM
-# Additional Models
-# Summary for RQ2
 
 # RQ3
 lme_C1m <- lme(commits~1, prj, random=~1|prjId, method="ML")
@@ -463,14 +394,11 @@ lme_C1g1aB <- lme(commits~Time*Licence, prj, random=~Time|prjId, method="ML")
 lme_C1g1bI <- lme(commits~Time+dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_C1g1bG <- lme(commits~Time+Time:dummyLicence1, prj, random=~Time|prjId, method="ML")
 lme_C1g1bB <- lme(commits~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
-lme_C1g1cI <- lme(commits~Time+dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_C1g1cG <- lme(commits~Time+Time:dummyLicence2, prj, random=~Time|prjId, method="ML")
-lme_C1g1cB <- lme(commits~Time*dummyLicence2, prj, random=~Time|prjId, method="ML")
 lme_C1g1dI <- lme(commits~Time+dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_C1g1dG <- lme(commits~Time+Time:dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_C1g1dB <- lme(commits~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
 lme_C1g1eI <- lme(commits~Time+OwnerType, prj, random=~Time|prjId, method="ML")
-lme_C1g1eG <- lme(commits~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML")
+lme_C1g1eG <- lme(commits~Time+Time:OwnerType, prj, random=~Time|prjId, method="ML") # doesn't converge
 lme_C1g1eB <- lme(commits~Time*OwnerType, prj, random=~Time|prjId, method="ML")
 summary_lme(lme_C1m, 1)
 summary_lme(lme_C1g1, 2, lme_C1m)
@@ -480,19 +408,80 @@ summary_lme(lme_C1g1aB, 3, lme_C1g1)
 summary_lme(lme_C1g1bI, 3, lme_C1g1)
 summary_lme(lme_C1g1bG, 3, lme_C1g1)
 summary_lme(lme_C1g1bB, 3, lme_C1g1)
-summary_lme(lme_C1g1cI, 3, lme_C1g1)
-summary_lme(lme_C1g1cG, 3, lme_C1g1)
-summary_lme(lme_C1g1cB, 3, lme_C1g1)
 summary_lme(lme_C1g1dI, 3, lme_C1g1)
 summary_lme(lme_C1g1dG, 3, lme_C1g1)
 summary_lme(lme_C1g1dB, 3, lme_C1g1)
 summary_lme(lme_C1g1eI, 3, lme_C1g1)
-summary_lme(lme_C1g1eG, 3, lme_C1g1)
 summary_lme(lme_C1g1eB, 3, lme_C1g1)
-# UMM
-# UGM
-# Additional Models
-# Summary for RQ3
+
+# Transformations
+prj$watchers <- log(prj$watchers+1)
+prj$issues <- sqrt(sqrt(prj$issues))
+prj$forks <- log(prj$forks+1)
+prj$commits <- log(prj$commits+1)
+
+# Spectator Interest (A): Watchers (1)
+lme_A1m <- lme(watchers~1, prj, random=~1|prjId, method="ML")
+lme_A1g1 <- lme(watchers~Time, prj, random=~Time|prjId, method="ML")
+lme_A1g1aB <- lme(watchers~Time*Licence, prj, random=~Time|prjId, method="ML") # doesn't converge
+lme_A1g1bB <- lme(watchers~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_A1g1dB <- lme(watchers~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_A1g1eB <- lme(watchers~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_A1m, 1)
+summary_lme(lme_A1g1, 2, lme_A1m)
+summary_lme(lme_A1g1bB, 3, lme_A1g1)
+summary_lme(lme_A1g1dB, 3, lme_A1g1)
+summary_lme(lme_A1g1eB, 3, lme_A1g1)
+lme_A1g1bGdI <- lme(watchers~Time+Time:dummyLicence1+dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_A1g1bGdI, 3, lme_A1g1)
+# Adopter Interest (B): Issues (1)
+lme_B1m <- lme(issues~1, prj, random=~1|prjId, method="ML")
+lme_B1g1 <- lme(issues~Time, prj, random=~Time|prjId, method="ML")
+lme_B1g1aB <- lme(issues~Time*Licence, prj, random=~Time|prjId, method="ML") # doesn't converge
+lme_B1g1bB <- lme(issues~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_B1g1dB <- lme(issues~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_B1g1eB <- lme(issues~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_B1m, 1)
+summary_lme(lme_B1g1, 2, lme_B1m)
+summary_lme(lme_B1g1bB, 3, lme_B1g1)
+summary_lme(lme_B1g1dB, 3, lme_B1g1)
+summary_lme(lme_B1g1eB, 3, lme_B1g1)
+lme_B1g1bGdI <- lme(issues~Time+Time:dummyLicence1+dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_B1g1bGdI, 3, lme_B1g1)
+# Adopter Interest (B): Forks (2)
+lme_B2m <- lme(forks~1, prj, random=~1|prjId, method="ML")
+lme_B2g1 <- lme(forks~Time, prj, random=~Time|prjId, method="ML")
+lme_B2g1aB <- lme(forks~Time*Licence, prj, random=~Time|prjId, method="ML")
+lme_B2g1bB <- lme(forks~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_B2g1dB <- lme(forks~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_B2g1eB <- lme(forks~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_B2m, 1)
+summary_lme(lme_B2g1, 2, lme_B2m)
+summary_lme(lme_B2g1aB, 3, lme_B2g1)
+summary_lme(lme_B2g1bB, 3, lme_B2g1)
+summary_lme(lme_B2g1dB, 3, lme_B2g1)
+summary_lme(lme_B2g1eB, 3, lme_B2g1)
+lme_B2g1bGdI <- lme(forks~Time+Time:dummyLicence1+dummyHealth, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_B2g1bGdI, 3, lme_B2g1)
+# Project Activity (C): Commits (1)
+lme_C1m <- lme(commits~1, prj, random=~1|prjId, method="ML")
+lme_C1g1 <- lme(commits~Time, prj, random=~Time|prjId, method="ML")
+lme_C1g1aB <- lme(commits~Time*Licence, prj, random=~Time|prjId, method="ML")
+lme_C1g1bB <- lme(commits~Time*dummyLicence1, prj, random=~Time|prjId, method="ML")
+lme_C1g1dB <- lme(commits~Time*dummyHealth, prj, random=~Time|prjId, method="ML")
+lme_C1g1eB <- lme(commits~Time*OwnerType, prj, random=~Time|prjId, method="ML")
+summary_lme(lme_C1m, 1)
+summary_lme(lme_C1g1, 2, lme_C1m)
+summary_lme(lme_C1g1aB, 3, lme_C1g1)
+summary_lme(lme_C1g1bB, 3, lme_C1g1)
+summary_lme(lme_C1g1dB, 3, lme_C1g1)
+summary_lme(lme_C1g1eB, 3, lme_C1g1)
+lme_C1g1dBeI <- lme(commits~Time+dummyHealth+Time:dummyHealth+OwnerType, prj,
+                    random=~Time|prjId, method="ML")
+summary_lme(lme_C1g1dBeI, 3, lme_C1g1)# No Improvement
 
 # Visualization Plots - Transformed
 
@@ -609,7 +598,7 @@ fit_OwnU_H25 <- exp(fixef[[1]]+25*fixef[[3]]+fixef[[4]]+prj$Time[1:8]*(fixef[[2]
 fit_OwnO_H75 <- exp(fixef[[1]]+75*fixef[[3]]+prj$Time[1:8]*(fixef[[2]]+75*fixef[[5]]))-1
 fit_OwnU_H75 <- exp(fixef[[1]]+75*fixef[[3]]+fixef[[4]]+prj$Time[1:8]*(fixef[[2]]+75*fixef[[5]]))-1
 plot(prj$Time[1:8], fit_OwnO_H25, ylim=c(0, 1100), type="b", pch=0,
-     ylab="Predicted Values: ln(commits+1)", xlab="Time")  
+     ylab="Predicted Values: commits", xlab="Time")  
 lines(prj$Time[1:8], fit_OwnU_H25, type="b", pch=15)   
 lines(prj$Time[1:8], fit_OwnO_H75, type="b", pch=1)   
 lines(prj$Time[1:8], fit_OwnU_H75, type="b", pch=16) 
@@ -661,13 +650,13 @@ w_withOwnerType_ot <-ggplot(prj, aes(x=Time, y=watchers, color=OwnerType)) +
   labs(title="Watchers Over Time Influenced By Owner Type") + 
   geom_point() + 
   geom_smooth()
-w_withOwnerType_ot
+w_withOwnerType_ot # fails computation
 
 #issues over time, influenced by IME INVARIANT VARIABLES, health, owner type, licence (ADOPTER INTEREST)
 (ggplot(df_5, aes(x=Time, y=issues, color=Health)) + 
-  labs(title="Issues Over Time Influenced By Health") + 
-  geom_point() + 
-  geom_smooth())
+    labs(title="Issues Over Time Influenced By Health") + 
+    geom_point() + 
+    geom_smooth())
 
 (ggplot(df_5, aes(x=Time, y=issues, color=OwnerType)) + 
     labs(title="Issues Over Time Influenced By Owner Type") + 
@@ -679,22 +668,20 @@ w_withOwnerType_ot
     geom_point() + 
     geom_smooth())
 
-#pull requests over time, nfluenced by TIME INVARIANT VARIABLES health, owner type, licence (PROJECT ACTIVITY)
-(ggplot(df_5, aes(x=Time, y=pullReq, color=Health)) + 
+# forks over time, nfluenced by TIME INVARIANT VARIABLES health, owner type, licence (PROJECT ACTIVITY)
+(ggplot(df_5, aes(x=Time, y=forks, color=Health)) + 
     labs(title="Pull Requests Over Time Influenced By Health") + 
     geom_point() + 
     geom_smooth())
 
-(ggplot(df_5, aes(x=Time, y=pullReq, color=Licence)) + 
+(ggplot(df_5, aes(x=Time, y=forks, color=Licence)) + 
     labs(title="Pull Requests Over Time Influenced By Licence") + 
     geom_point() + 
     geom_smooth())
 
-(ggplot(df_5, aes(x=Time, y=pullReq, color=OwnerType)) + 
+(ggplot(df_5, aes(x=Time, y=forks, color=OwnerType)) + 
     labs(title="Pull Requests Over Time Influenced By OwnerType") + 
     geom_point() + 
     geom_smooth())
-
-
 
 # END
