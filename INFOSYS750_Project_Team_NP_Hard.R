@@ -494,7 +494,8 @@ summary_lme(lme_C1g1eB, 3, lme_C1g1)
 # Additional Models
 # Summary for RQ3
 
-# Visualization Plots for Models
+# Visualization Plots
+
 fixef <- fixef(lme_A1g1bGdI)
 fit_L0_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
 fit_L1_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
@@ -506,11 +507,54 @@ lines(prj$Time[1:8], fit_L1_H25, type="b", pch=15)
 lines(prj$Time[1:8], fit_L0_H75, type="b", pch=1)   
 lines(prj$Time[1:8], fit_L1_H75, type="b", pch=16) 
 title("Final Model: controlled effects of Licence") 
-legend(1, 3.5, c("No Licence, Health=25", "No Licence, Health=75", 
-                 "Licence, Health=25", "Licence, Health=75"),
+legend(x="left", c("No Licence, Health=25", "Licence, Health=25", 
+                   "No Licence, Health=25", "Licence, Health=75"),
        pch=c(0,15,1,16))
 
+fixef <- fixef(lme_B1g1bGdI)
+fit_L0_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+fit_L0_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+plot(prj$Time[1:8], fit_L0_H25, ylim=c(0, 2.5), type="b", pch=0,
+     ylab="Predicted Values: sqrt(sqrt(issues))", xlab="Time")  
+lines(prj$Time[1:8], fit_L1_H25, type="b", pch=15)   
+lines(prj$Time[1:8], fit_L0_H75, type="b", pch=1)   
+lines(prj$Time[1:8], fit_L1_H75, type="b", pch=16) 
+title("Final Model: controlled effects of Licence") 
+legend(x="topleft", c("No Licence, Health=25", "Licence, Health=25", 
+                      "No Licence, Health=25", "Licence, Health=75"),
+       pch=c(0,15,1,16))
 
+fixef <- fixef(lme_B2g1bGdI)
+fit_L0_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H25 <- fixef[[1]] + 25*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+fit_L0_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*fixef[[2]]
+fit_L1_H75 <- fixef[[1]] + 75*fixef[[3]] + prj$Time[1:8]*(fixef[[2]]+fixef[[4]])
+plot(prj$Time[1:8], fit_L0_H25, ylim=c(0, 2.5), type="b", pch=0,
+     ylab="Predicted Values: ln(forks+1)", xlab="Time")  
+lines(prj$Time[1:8], fit_L1_H25, type="b", pch=15)   
+lines(prj$Time[1:8], fit_L0_H75, type="b", pch=1)   
+lines(prj$Time[1:8], fit_L1_H75, type="b", pch=16) 
+title("Final Model: controlled effects of Licence") 
+legend(x="topleft", c("No Licence, Health=25", "Licence, Health=25", 
+                      "No Licence, Health=25", "Licence, Health=75"),
+       pch=c(0,15,1,16))
+
+fixef <- fixef(lme_C1g1dBeI)
+fit_OwnO_H25 <- fixef[[1]]+25*fixef[[3]]+prj$Time[1:8]*(fixef[[2]]+25*fixef[[5]])
+fit_OwnU_H25 <- fixef[[1]]+25*fixef[[3]]+fixef[[4]]+prj$Time[1:8]*(fixef[[2]]+25*fixef[[5]])
+fit_OwnO_H75 <- fixef[[1]]+75*fixef[[3]]+prj$Time[1:8]*(fixef[[2]]+75*fixef[[5]])
+fit_OwnU_H75 <- fixef[[1]]+75*fixef[[3]]+fixef[[4]]+prj$Time[1:8]*(fixef[[2]]+75*fixef[[5]])
+plot(prj$Time[1:8], fit_OwnO_H25, ylim=c(0, 7), type="b", pch=0,
+     ylab="Predicted Values: ln(commits+1)", xlab="Time")  
+lines(prj$Time[1:8], fit_OwnU_H25, type="b", pch=15)   
+lines(prj$Time[1:8], fit_OwnO_H75, type="b", pch=1)   
+lines(prj$Time[1:8], fit_OwnU_H75, type="b", pch=16) 
+title("Final Model: controlled effects of Owner") 
+legend(x="topleft", c("Owner=Org, Health=25", "Owner=User, Health=25", 
+                      "Owner=Org, Health=75", "Owner=User, Health=75"),
+       pch=c(0,15,1,16))
 
 # Any visualizations 
 #Time Invariant IVs - Health, Licence, Owner Type
